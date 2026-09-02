@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+<title>Krapp × tPHA – Farbmodell</title>
+<style>
+  :root{
+    --paper:#EAE4D6;
+    --card:#F8F4E9;
+    --card-line:#D8CEB5;
+    --ink:#26211A;
+    --ink-muted:#736A57;
+    --accent:#A6461F;
+    --accent-soft:#C97A4A;
+    --good:#4C6B4F;
+    --font-display: ui-serif, Georgia, "Times New Roman", "Noto Serif", serif;
+    --font-mono: ui-monospace, "SF Mono", "Roboto Mono", "Cascadia Mono", Consolas, monospace;
+    --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background-color:var(--paper);
+    background-image:
+      repeating-linear-gradient(0deg, rgba(38,33,26,0.05) 0px, rgba(38,33,26,0.05) 1px, transparent 1px, transparent 28px),
+      repeating-linear-gradient(90deg, rgba(38,33,26,0.05) 0px, rgba(38,33,26,0.05) 1px, transparent 1px, transparent 28px);
+    color:var(--ink);
+    font-family:var(--font-body);
+    -webkit-text-size-adjust:100%;
+  }
+  .page{max-width:520px;margin:0 auto;padding:20px 16px 48px;}
+
+  .lang-switch{display:flex;justify-content:flex-end;gap:6px;margin-bottom:14px;}
+  .lang-btn{
+    padding:4px 12px;
+    font-size:0.72rem;
+    border-radius:20px;
+    border:1px solid var(--card-line);
+    background:transparent;
+    color:var(--ink-muted);
+    font-family:var(--font-mono);
+    letter-spacing:0.04em;
+    cursor:pointer;
+  }
+  .lang-btn.active{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#F8F4E9;
+  }
+
+  header{margin-bottom:18px;}
+  h1{
+    font-family:var(--font-display);
+    font-size:1.7rem;
+    margin:0 0 2px;
+    letter-spacing:0.01em;
+  }
+  .subtitle{margin:0;color:var(--ink-muted);font-size:0.88rem;line-height:1.4;}
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--card-line);
+    border-radius:10px;
+    padding:16px;
+    margin-bottom:16px;
+  }
+
+  /* Schwenkkasten */
+  .swatch{
+    height:130px;
+    border-radius:8px;
+    border:1px solid rgba(38,33,26,0.35);
+    display:flex;
+    align-items:flex-end;
+    overflow:hidden;
+    transition:background-color .12s ease;
+    box-shadow: inset 0 0 24px rgba(0,0,0,0.08);
+  }
+  .swatch-readout{
+    width:100%;
+    padding:8px 10px;
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    font-family:var(--font-mono);
+    font-size:0.86rem;
+    background:linear-gradient(0deg, rgba(0,0,0,0.28), transparent);
+  }
+  .swatch-readout span{white-space:nowrap;}
+
+  .hue-bar-wrap{margin-top:12px;}
+  .hue-bar{
+    position:relative;
+    height:10px;
+    border-radius:5px;
+    background:linear-gradient(90deg, hsl(10,60%,42%), hsl(50,65%,50%));
+    border:1px solid rgba(38,33,26,0.25);
+  }
+  .hue-marker{
+    position:absolute;
+    top:50%;
+    width:14px;height:14px;
+    background:var(--card);
+    border:2px solid var(--ink);
+    border-radius:50%;
+    transform:translate(-50%,-50%);
+    box-shadow:0 0 0 2px var(--card);
+  }
+  .hue-bar-labels{
+    display:flex;justify-content:space-between;
+    font-size:0.72rem;color:var(--ink-muted);
+    margin-top:4px;
+  }
+
+  .metrics{
+    display:flex;
+    gap:10px;
+    margin-top:14px;
+    flex-wrap:wrap;
+  }
+  .metrics > div{
+    flex:1;
+    min-width:80px;
+    border:1px solid var(--card-line);
+    border-radius:6px;
+    padding:6px 8px;
+    background:rgba(255,255,255,0.35);
+  }
+  .metric-label{
+    display:block;
+    font-size:0.68rem;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--ink-muted);
+  }
+  .metric-value{
+    display:block;
+    font-family:var(--font-mono);
+    font-size:1.02rem;
+  }
+
+  h2{
+    font-family:var(--font-display);
+    font-size:1.05rem;
+    margin:0 0 10px;
+    padding-bottom:6px;
+    border-bottom:1px solid var(--card-line);
+  }
+  h2.spaced{margin-top:22px;}
+
+  .slider-row{margin-bottom:16px;}
+  .slider-row:last-child{margin-bottom:4px;}
+  .slider-row label{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:0.9rem;
+    margin-bottom:6px;
+  }
+  .slider-row label .valtext{
+    font-family:var(--font-mono);
+    color:var(--ink);
+  }
+  .badge{
+    font-size:0.68rem;
+    padding:1px 6px;
+    border-radius:20px;
+    margin-left:6px;
+    font-family:var(--font-body);
+    white-space:nowrap;
+  }
+  .badge.ok{color:var(--good);border:1px solid var(--good);}
+  .badge.warn{color:var(--accent);border:1px solid var(--accent);}
+
+  input[type=range]{
+    -webkit-appearance:none;
+    appearance:none;
+    width:100%;
+    height:6px;
+    border-radius:4px;
+    background:var(--card-line);
+    accent-color:var(--accent);
+    touch-action:pan-y;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width:24px;height:24px;
+    border-radius:50%;
+    background:var(--accent);
+    border:2px solid var(--card);
+    box-shadow:0 0 0 1px var(--accent);
+    cursor:pointer;
+    margin-top:-1px;
+  }
+  input[type=range]::-moz-range-thumb{
+    width:22px;height:22px;
+    border-radius:50%;
+    background:var(--accent);
+    border:2px solid var(--card);
+    cursor:pointer;
+  }
+
+  .range-note{
+    font-size:0.72rem;
+    color:var(--ink-muted);
+    font-style:italic;
+    margin-top:6px;
+    line-height:1.35;
+  }
+  .slider-row.disabled label{color:var(--ink-muted);}
+  .slider-row.disabled input[type=range]{
+    opacity:0.35;
+    pointer-events:none;
+  }
+  .slider-row.disabled .range-note{color:var(--accent-soft);font-style:normal;}
+
+  .toggle-row{display:flex;gap:8px;margin-bottom:16px;}
+  .warning-note{
+    background:rgba(166,70,31,0.10);
+    border:1px solid var(--accent);
+    border-radius:6px;
+    padding:8px 10px;
+    font-size:0.78rem;
+    color:var(--accent);
+    margin:-8px 0 16px;
+    line-height:1.4;
+  }
+  .toggle-btn{
+    flex:1;
+    padding:8px 4px;
+    border-radius:6px;
+    border:1px solid var(--card-line);
+    background:transparent;
+    color:var(--ink-muted);
+    font-family:var(--font-body);
+    font-size:0.78rem;
+    cursor:pointer;
+  }
+  .toggle-btn.active{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#F8F4E9;
+  }
+
+  details{margin-bottom:16px;}
+  details > summary{
+    cursor:pointer;
+    font-family:var(--font-display);
+    font-size:1.0rem;
+    padding:12px 16px;
+    background:var(--card);
+    border:1px solid var(--card-line);
+    border-radius:10px;
+    list-style:none;
+  }
+  details > summary::-webkit-details-marker{display:none;}
+  details > summary::before{content:"▸ ";color:var(--accent);}
+  details[open] > summary::before{content:"▾ ";}
+  details[open] > summary{border-radius:10px 10px 0 0;border-bottom:none;}
+  .details-body{
+    border:1px solid var(--card-line);
+    border-top:none;
+    border-radius:0 0 10px 10px;
+    padding:14px 16px;
+    background:var(--card);
+  }
+
+  table{width:100%;border-collapse:collapse;font-size:0.86rem;}
+  table td{padding:4px 2px;border-bottom:1px dashed var(--card-line);}
+  table td:first-child{color:var(--ink-muted);}
+  table td:last-child{font-family:var(--font-mono);text-align:right;}
+
+  .const-grid{display:flex;flex-direction:column;gap:10px;}
+  .const-item{display:flex;justify-content:space-between;align-items:center;gap:10px;}
+  .const-item label{font-size:0.82rem;flex:1;line-height:1.25;}
+  .const-item .unit{color:var(--ink-muted);font-size:0.76rem;}
+  .const-item input[type=number]{
+    width:110px;
+    font-family:var(--font-mono);
+    font-size:0.88rem;
+    padding:5px 6px;
+    border:1px solid var(--card-line);
+    border-radius:5px;
+    background:#fff;
+    color:var(--ink);
+  }
+  .reset-btn{
+    margin-top:14px;
+    width:100%;
+    padding:10px;
+    border-radius:6px;
+    border:1px solid var(--accent);
+    background:transparent;
+    color:var(--accent);
+    font-family:var(--font-body);
+    font-size:0.88rem;
+    cursor:pointer;
+  }
+  .reset-btn:active{background:var(--accent);color:#fff;}
+
+  footer{
+    margin-top:24px;
+    font-size:0.74rem;
+    color:var(--ink-muted);
+    line-height:1.5;
+  }
+  footer code{font-family:var(--font-mono);}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="lang-switch" role="group" aria-label="Sprache / Language">
+    <button type="button" class="lang-btn active" id="btnLangDe">DE</button>
+    <button type="button" class="lang-btn" id="btnLangEn">EN</button>
+  </div>
+
+  <header>
+    <h1 data-i18n="title">Krapp auf tPHA</h1>
+    <p class="subtitle" data-i18n="subtitle">Farbvorhersage nach dem Diffusions-/Chelatisierungsmodell (Stand V4 / V4.1)</p>
+  </header>
+
+  <section class="card">
+    <div class="swatch" id="swatch">
+      <div class="swatch-readout">
+        <span id="labReadout">L* – a* – b* –</span>
+        <span id="hexReadout">#––––––</span>
+      </div>
+    </div>
+    <div class="hue-bar-wrap">
+      <div class="hue-bar" id="hueBar"><div class="hue-marker" id="hueMarker"></div></div>
+      <div class="hue-bar-labels"><span data-i18n="hueLabelChelate">Ti-Chelat</span><span data-i18n="hueLabelFree">freies Alizarin</span></div>
+    </div>
+    <div class="metrics">
+      <div><span class="metric-label">C*</span><span class="metric-value" id="cReadout">–</span></div>
+      <div><span class="metric-label">h</span><span class="metric-value" id="hReadout">–</span></div>
+      <div><span class="metric-label">Gamut</span><span class="metric-value" id="gamutReadout">–</span></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2 data-i18n="sectionDyeing">Färbung</h2>
+    <div class="slider-row">
+      <label for="TFarb"><span data-i18n="labelTemperature">Temperatur</span><span><span class="valtext" id="TFarbVal">75,0 °C</span><span class="badge" id="TFarbBadge"></span></span></label>
+      <input type="range" id="TFarb" min="55" max="95" step="0.5" value="75">
+    </div>
+    <div class="slider-row">
+      <label for="tFarb"><span data-i18n="labelDuration">Dauer</span><span class="valtext" id="tFarbVal">30 min</span></label>
+      <input type="range" id="tFarb" min="1" max="120" step="1" value="30">
+      <div class="range-note" id="tFarbNote"></div>
+    </div>
+
+    <h2 class="spaced" data-i18n="sectionClearing">Klärung</h2>
+    <div class="toggle-row">
+      <button type="button" class="toggle-btn" id="btnMediumNone" data-i18n="toggleNone">kein Medium</button>
+      <button type="button" class="toggle-btn active" id="btnMediumDest" data-i18n="toggleDest">dest. Wasser</button>
+      <button type="button" class="toggle-btn" id="btnMediumTap" data-i18n="toggleTap">Leitungswasser</button>
+    </div>
+    <div class="warning-note" id="mediumTapWarning" data-i18n="mediumTapWarning" style="display:none;"></div>
+    <div class="slider-row" id="TKlaerRow">
+      <label for="TKlaer"><span data-i18n="labelTemperature">Temperatur</span><span><span class="valtext" id="TKlaerVal">75,0 °C</span><span class="badge" id="TKlaerBadge"></span></span></label>
+      <input type="range" id="TKlaer" min="55" max="95" step="0.5" value="75">
+      <div class="range-note" id="TKlaerNote" data-i18n="klaerTempNote">Ohne Klärung (0 min) hat die Temperatur keinen Effekt.</div>
+    </div>
+    <div class="slider-row">
+      <label for="tKlaer"><span data-i18n="labelDuration">Dauer</span><span class="valtext" id="tKlaerVal">30 min (0 = keine Klärung)</span></label>
+      <input type="range" id="tKlaer" min="0" max="90" step="1" value="30">
+      <div class="range-note" id="tKlaerNote"></div>
+    </div>
+  </section>
+
+  <details>
+    <summary data-i18n="detailsSummary">Zwischenwerte</summary>
+    <div class="details-body">
+      <table id="detailsTable"></table>
+    </div>
+  </details>
+
+  <details>
+    <summary data-i18n="constSummary">Konstanten bearbeiten</summary>
+    <div class="details-body">
+      <div class="const-grid" id="constGrid"></div>
+      <button type="button" class="reset-btn" id="resetConst" data-i18n="resetButton">Auf Standardwerte zurücksetzen</button>
+    </div>
+  </details>
+
+  <footer data-i18n-html="footer">
+    Modell aus <code>Modell_tPHA.md</code>. Gültigkeitsbereich der Kalibrierung: Färbung 60&nbsp;–85&nbsp;°C,
+    Klärung kalibriert bei 75&nbsp;°C (Arrhenius-Extrapolation mit gleicher Ea als Annahme).
+    Werte außerhalb sind Modell-Extrapolationen, keine gemessenen Bereiche.
+    Lab→RGB ist eine Näherung (D65, sRGB) für die Bildschirmdarstellung, kein Ersatz für die Colorimeter-Messung.
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const DEFAULTS = {
+    d0: 80,                 // µm, Schichtdicke bei Referenztemperatur Tref_d
+    Tref_d: 85,              // °C
+    Ea: 66.8,                 // kJ/mol, Diffusion
+    theta30_slope: 0.01847,
+    theta30_intercept: -1.0936,
+    Amax: 15.62,
+    satLen: 32.4,             // µm
+    hFree: 70.4,              // ° Hue freies Alizarin
+    hChel: 29.8,              // ° Hue Ti-Chelat
+    strength: 2.504,          // relative Farbstärke Chelat/frei
+    L0: 88.19,
+    k0: 4.561e-4,             // 1/s bei Tref_clear
+    Tref_clear: 75,           // °C
+    Ea_clear: 53.7,           // kJ/mol — direkt aus 75°C+90°C gemessen (nicht mehr Annahme=Ea Diffusion)
+    loss_wet: 0.286,
+    loss_dry: 0.089,
+    f_dry: 0.29,               // Geschwindigkeitsfaktor Klärung: kein Medium vs. dest. Wasser (=1)
+    f_tap: 1.53,               // Geschwindigkeitsfaktor Leitungswasser vs. dest. Wasser (=1) —
+                               // zurückgerechnet aus 90°C/25min (p=89,5% vs. 77,1% dest.); Doc nennt separat ~1,3–1,4
+    probeDepth: 93.4,          // µm, optische Sondiertiefe -> Schwelle für "kein sichtbarer Zugewinn mehr"
+    probeMarginPct: 10,        // %, Zeitreserve auf die Sondiertiefe für den Dauer-Slider
+    clearDonePct: 99.5         // %, ab wann Klärung als abgeschlossen gilt (Rest an freiem Alizarin)
+  };
+
+  const CONST_DEFS = [
+    {key:'d0', label:{de:'d₀ — Schichtdicke bei Referenztemperatur', en:'d₀ — layer thickness at reference temperature'}, unit:'µm', step:0.1},
+    {key:'Tref_d', label:{de:'Referenztemperatur für d₀', en:'Reference temperature for d₀'}, unit:'°C', step:0.5},
+    {key:'Ea', label:{de:'Eₐ — Aktivierungsenergie Diffusion', en:'Eₐ — activation energy, diffusion'}, unit:'kJ/mol', step:0.1},
+    {key:'theta30_slope', label:{de:'θ₃₀ — Steigung', en:'θ₃₀ — slope'}, unit:'1/°C', step:0.0001},
+    {key:'theta30_intercept', label:{de:'θ₃₀ — Achsenabschnitt', en:'θ₃₀ — intercept'}, unit:'', step:0.0001},
+    {key:'Amax', label:{de:'A_max — max. Farbstoffmenge', en:'A_max — max. dye amount'}, unit:'a.u.', step:0.01},
+    {key:'satLen', label:{de:'Sättigungslänge (A vs. d)', en:'Saturation length (A vs. d)'}, unit:'µm', step:0.1},
+    {key:'hFree', label:{de:'Hue freies Alizarin', en:'Hue, free alizarin'}, unit:'°', step:0.1},
+    {key:'hChel', label:{de:'Hue Ti-Chelat', en:'Hue, Ti chelate'}, unit:'°', step:0.1},
+    {key:'strength', label:{de:'Relative Farbstärke Chelat/frei', en:'Relative color strength, chelate/free'}, unit:'', step:0.001},
+    {key:'L0', label:{de:'L*-Divisor', en:'L* divisor'}, unit:'', step:0.01},
+    {key:'k0', label:{de:'k₀ — Klärkonstante bei Referenztemp.', en:'k₀ — clearing rate constant at reference temp.'}, unit:'1/s', step:0.00001},
+    {key:'Tref_clear', label:{de:'Referenztemperatur für k₀', en:'Reference temperature for k₀'}, unit:'°C', step:0.5},
+    {key:'Ea_clear', label:{de:'Eₐ — Aktivierungsenergie Klärung', en:'Eₐ — activation energy, clearing'}, unit:'kJ/mol', step:0.1},
+    {key:'loss_wet', label:{de:'Substanzverlust-Faktor (dest./Leitungswasser)', en:'Substance loss factor (distilled/tap water)'}, unit:'', step:0.001},
+    {key:'loss_dry', label:{de:'Substanzverlust-Faktor (kein Medium)', en:'Substance loss factor (no medium)'}, unit:'', step:0.001},
+    {key:'f_dry', label:{de:'Klär-Geschwindigkeitsfaktor f (kein Medium)', en:'Clearing rate factor f (no medium)'}, unit:'', step:0.01},
+    {key:'f_tap', label:{de:'Klär-Geschwindigkeitsfaktor f (Leitungswasser)', en:'Clearing rate factor f (tap water)'}, unit:'', step:0.01},
+    {key:'probeDepth', label:{de:'Optische Sondiertiefe (Grenze für Färbedauer-Slider)', en:'Optical probe depth (limit for dyeing-duration slider)'}, unit:'µm', step:0.5},
+    {key:'probeMarginPct', label:{de:'Zeitreserve auf Sondiertiefe für Färbedauer-Slider', en:'Time margin on probe depth for dyeing-duration slider'}, unit:'%', step:0.5},
+    {key:'clearDonePct', label:{de:'Klärung gilt als fertig ab (Rest an freiem Alizarin = 100 − dieser Wert)', en:'Clearing counts as done above (remaining free alizarin = 100 − this value)'}, unit:'%', step:0.1},
+  ];
+
+  const I18N = {
+    de: {
+      title: 'Krapp auf tPHA',
+      subtitle: 'Farbvorhersage nach dem Diffusions-/Chelatisierungsmodell (Stand V4 / V4.1)',
+      hueLabelChelate: 'Ti-Chelat',
+      hueLabelFree: 'freies Alizarin',
+      sectionDyeing: 'Färbung',
+      sectionClearing: 'Klärung',
+      labelTemperature: 'Temperatur',
+      labelDuration: 'Dauer',
+      toggleNone: 'kein Medium',
+      toggleDest: 'dest. Wasser',
+      toggleTap: 'Leitungswasser',
+      mediumTapWarning: 'Leitungswasser ist von Ort zu Ort unterschiedlich (Härtegrad, Mineralgehalt) und daher nicht zuverlässig reproduzierbar — diese Vorhersage dient nur zur Orientierung, nicht als belastbares Rezept.',
+      klaerTempNote: 'Ohne Klärung (0 min) hat die Temperatur keinen Effekt.',
+      detailsSummary: 'Zwischenwerte',
+      constSummary: 'Konstanten bearbeiten',
+      resetButton: 'Auf Standardwerte zurücksetzen',
+      footer: 'Modell aus <code>Modell_tPHA.md</code>. Gültigkeitsbereich der Kalibrierung: Färbung 60–90&nbsp;°C, '
+            + 'Klärung direkt kalibriert bei 75&nbsp;°C und 90&nbsp;°C (dest. Wasser), Zwischenwerte per Arrhenius interpoliert. '
+            + 'Leitungswasser-Faktor aus einem Einzelvergleich zurückgerechnet (Dokument nennt separat einen groberen Bereich ~1,3–1,4). '
+            + 'Werte außerhalb sind Modell-Extrapolationen, keine gemessenen Bereiche. '
+            + 'Lab→RGB ist eine Näherung (D65, sRGB) für die Bildschirmdarstellung, kein Ersatz für die Colorimeter-Messung.',
+      badgeOk: '✓ kalibriert',
+      badgeWarnFarb: 'Extrapolation (kalibriert 60–90 °C)',
+      badgeWarnKlaer: 'Extrapolation (kalibriert bei 75 °C / 90 °C)',
+      gamutIn: 'im sRGB',
+      gamutOut: 'außerhalb',
+      noClearingSuffix: ' (keine Klärung)',
+      tFarbNote: (maxMin, marginPct) => 'Max. ' + maxMin + ' min bei dieser Temperatur — entspricht ' + marginPct + ' % Reserve auf die Sondiertiefe, danach ändert sich die Farbe kaum noch.',
+      tKlaerNote: (maxMin, pct) => 'Max. ' + maxMin + ' min bei dieser Temperatur — danach gelten ' + pct + ' % als praktisch abgeschlossen.',
+      rowSchichtdicke: 'Schichtdicke d',
+      rowThetaVor: 'θ (vor Klärung)',
+      rowAVor: 'A (vor Klärung)',
+      rowLabVor: 'L*/a*/b* vor Klärung',
+      rowK: 'Klärkonstante k(T)',
+      rowP: 'Klär-Fortschritt p',
+      rowThetaNach: 'θ (nach Klärung)',
+      rowANach: 'A (nach Klärung)',
+    },
+    en: {
+      title: 'Madder on tPHA',
+      subtitle: 'Color prediction from the diffusion/chelation model (as of V4 / V4.1)',
+      hueLabelChelate: 'Ti chelate',
+      hueLabelFree: 'free alizarin',
+      sectionDyeing: 'Dyeing',
+      sectionClearing: 'Clearing',
+      labelTemperature: 'Temperature',
+      labelDuration: 'Duration',
+      toggleNone: 'no medium',
+      toggleDest: 'distilled water',
+      toggleTap: 'tap water',
+      mediumTapWarning: 'Tap water varies by location (hardness, mineral content) and is therefore not reliably reproducible — this prediction is for orientation only, not a dependable recipe.',
+      klaerTempNote: 'Without clearing (0 min), temperature has no effect.',
+      detailsSummary: 'Intermediate values',
+      constSummary: 'Edit constants',
+      resetButton: 'Reset to default values',
+      footer: 'Model from <code>Modell_tPHA.md</code>. Calibration range: dyeing 60–90&nbsp;°C, '
+            + 'clearing directly calibrated at 75&nbsp;°C and 90&nbsp;°C (distilled water), intermediate values interpolated via Arrhenius. '
+            + 'Tap water factor back-calculated from a single comparison (the document separately cites a coarser range of ~1.3–1.4). '
+            + 'Values outside this range are model extrapolations, not measured ranges. '
+            + 'Lab→RGB is an approximation (D65, sRGB) for on-screen display, not a substitute for colorimeter measurement.',
+      badgeOk: '✓ calibrated',
+      badgeWarnFarb: 'extrapolation (calibrated 60–90 °C)',
+      badgeWarnKlaer: 'extrapolation (calibrated at 75 °C / 90 °C)',
+      gamutIn: 'in sRGB',
+      gamutOut: 'out of gamut',
+      noClearingSuffix: ' (no clearing)',
+      tFarbNote: (maxMin, marginPct) => 'Max. ' + maxMin + ' min at this temperature — includes a ' + marginPct + '% margin on the probe depth; beyond that the color barely changes.',
+      tKlaerNote: (maxMin, pct) => 'Max. ' + maxMin + ' min at this temperature — beyond that, ' + pct + '% counts as practically complete.',
+      rowSchichtdicke: 'Layer thickness d',
+      rowThetaVor: 'θ (before clearing)',
+      rowAVor: 'A (before clearing)',
+      rowLabVor: 'L*/a*/b* before clearing',
+      rowK: 'Clearing rate constant k(T)',
+      rowP: 'Clearing progress p',
+      rowThetaNach: 'θ (after clearing)',
+      rowANach: 'A (after clearing)',
+    }
+  };
+
+  const state = {
+    consts: Object.assign({}, DEFAULTS),
+    medium: 'dest',   // 'none' | 'dest' | 'tap'
+    lang: 'de'
+  };
+
+  const R_GAS = 8.314;
+  const clamp01 = x => Math.max(0, Math.min(1, x));
+
+  function fmt(n, digits){
+    if(!isFinite(n)) return "–";
+    const s = n.toFixed(digits);
+    return state.lang === 'de' ? s.replace('.', ',') : s;
+  }
+
+  function fmtExp(n, digits){
+    const s = n.toExponential(digits);
+    return state.lang === 'de' ? s.replace('.', ',') : s;
+  }
+
+  function abFromAtheta(A, theta, c){
+    const kAfree = 1, kAchel = c.strength;
+    const kBfree = Math.tan(c.hFree * Math.PI/180);
+    const kBchel = c.strength * Math.tan(c.hChel * Math.PI/180);
+    return {
+      a: A*((1-theta)*kAfree + theta*kAchel),
+      b: A*((1-theta)*kBfree + theta*kBchel)
+    };
+  }
+
+  function labToRgb(L, a, b){
+    const refX=95.047, refY=100.0, refZ=108.883;
+    let y=(L+16)/116, x=a/500+y, z=y-b/200;
+    function finv(t){ const t3=t*t*t; return t3>0.008856 ? t3 : (t-16/116)/7.787; }
+    const X = refX*finv(x)/100, Y = refY*finv(y)/100, Z = refZ*finv(z)/100;
+    let r =  X*3.2406 + Y*-1.5372 + Z*-0.4986;
+    let g =  X*-0.9689 + Y*1.8758 + Z*0.0415;
+    let bl = X*0.0557 + Y*-0.2040 + Z*1.0570;
+    function gamma(c){ return c>0.0031308 ? 1.055*Math.pow(c,1/2.4)-0.055 : 12.92*c; }
+    r=gamma(r); g=gamma(g); bl=gamma(bl);
+    const outOfGamut = [r,g,bl].some(c => c<-0.0005 || c>1.0005);
+    const clamp = c => Math.max(0, Math.min(1, c));
+    r=clamp(r); g=clamp(g); bl=clamp(bl);
+    return {
+      r: Math.round(r*255), g: Math.round(g*255), b: Math.round(bl*255),
+      outOfGamut
+    };
+  }
+
+  function toHex(v){ return v.toString(16).padStart(2,'0'); }
+
+  function badge(el, ok, warnText){
+    el.textContent = ok ? I18N[state.lang].badgeOk : ('◆ ' + warnText);
+    el.className = 'badge ' + (ok ? 'ok' : 'warn');
+  }
+
+  const els = {};
+  ['TFarb','tFarb','TKlaer','tKlaer'].forEach(id => els[id] = document.getElementById(id));
+  const TFarbVal = document.getElementById('TFarbVal');
+  const tFarbVal = document.getElementById('tFarbVal');
+  const TKlaerVal = document.getElementById('TKlaerVal');
+  const tKlaerVal = document.getElementById('tKlaerVal');
+  const TFarbBadge = document.getElementById('TFarbBadge');
+  const TKlaerBadge = document.getElementById('TKlaerBadge');
+  const swatch = document.getElementById('swatch');
+  const labReadout = document.getElementById('labReadout');
+  const hexReadout = document.getElementById('hexReadout');
+  const cReadout = document.getElementById('cReadout');
+  const hReadout = document.getElementById('hReadout');
+  const gamutReadout = document.getElementById('gamutReadout');
+  const hueMarker = document.getElementById('hueMarker');
+  const detailsTable = document.getElementById('detailsTable');
+  const btnMediumNone = document.getElementById('btnMediumNone');
+  const btnMediumDest = document.getElementById('btnMediumDest');
+  const btnMediumTap = document.getElementById('btnMediumTap');
+  const mediumTapWarning = document.getElementById('mediumTapWarning');
+  const tFarbNote = document.getElementById('tFarbNote');
+  const tKlaerNote = document.getElementById('tKlaerNote');
+  const TKlaerRow = document.getElementById('TKlaerRow');
+  const btnLangDe = document.getElementById('btnLangDe');
+  const btnLangEn = document.getElementById('btnLangEn');
+
+  // Defensive UI-Grenzen (keine physikalischen Konstanten, nur Slider-Sanity)
+  const FLOOR_FARB_MIN = 5, CEIL_FARB_MIN = 720;
+  const FLOOR_KLAER_MIN = 3, CEIL_KLAER_MIN = 720;
+
+  // Größte sinnvolle Färbedauer: ab hier erreicht die Schichtdicke die optische
+  // Sondiertiefe, weiterer Zeitgewinn ist farblich kaum noch messbar.
+  function computeFarbMaxMinutes(TFarb, c){
+    const expFactor = Math.exp(-(c.Ea*1000)/(2*R_GAS) * (1/(TFarb+273.15) - 1/(c.Tref_d+273.15)));
+    const dAtRef = c.d0 * expFactor; // Schichtdicke bei t = 1800 s
+    const probe = Math.max(0.1, c.probeDepth) * (1 + c.probeMarginPct/100);
+    if(dAtRef <= 0) return CEIL_FARB_MIN;
+    const tMin = (1800 * Math.pow(probe/dAtRef, 2)) / 60;
+    return Math.max(FLOOR_FARB_MIN, Math.min(CEIL_FARB_MIN, tMin));
+  }
+
+  // Geschwindigkeitsfaktor f je Klärmedium (destilliertes Wasser = Referenz, f=1)
+  function fOfMedium(medium, c){
+    if(medium==='none') return c.f_dry;
+    if(medium==='tap') return c.f_tap;
+    return 1; // 'dest'
+  }
+  function lossOfMedium(medium, c){
+    return medium==='none' ? c.loss_dry : c.loss_wet; // Leitungswasser: kein Unterschied zu dest. (siehe 4.3)
+  }
+
+  // Größte sinnvolle Klärdauer: ab hier ist der als "praktisch vollständig
+  // geklärt" definierte Anteil (clearDonePct) erreicht.
+  function computeKlaerMaxMinutes(TKlaer, c, medium){
+    const f = fOfMedium(medium, c);
+    const k = c.k0 * Math.exp(-(c.Ea_clear*1000)/R_GAS * (1/(TKlaer+273.15) - 1/(c.Tref_clear+273.15)));
+    const targetFrac = Math.min(0.999, Math.max(0.01, c.clearDonePct/100));
+    if(k<=0) return CEIL_KLAER_MIN;
+    const tMin = (-Math.log(1-targetFrac) / (k*f)) / 60;
+    return Math.max(FLOOR_KLAER_MIN, Math.min(CEIL_KLAER_MIN, tMin));
+  }
+
+  function refreshFarbRange(){
+    const c = state.consts;
+    const TFarb = parseFloat(els.TFarb.value);
+    const maxMin = Math.round(computeFarbMaxMinutes(TFarb, c));
+    els.tFarb.max = maxMin;
+    if(parseFloat(els.tFarb.value) > maxMin) els.tFarb.value = maxMin;
+    tFarbNote.textContent = I18N[state.lang].tFarbNote(maxMin, fmt(c.probeMarginPct,0));
+  }
+
+  function refreshKlaerRange(){
+    const c = state.consts;
+    const TKlaer = parseFloat(els.TKlaer.value);
+    const maxMin = Math.round(computeKlaerMaxMinutes(TKlaer, c, state.medium));
+    els.tKlaer.max = maxMin;
+    if(parseFloat(els.tKlaer.value) > maxMin) els.tKlaer.value = maxMin;
+    tKlaerNote.textContent = I18N[state.lang].tKlaerNote(maxMin, fmt(c.clearDonePct,1));
+
+    const isOff = parseFloat(els.tKlaer.value) === 0;
+    TKlaerRow.classList.toggle('disabled', isOff);
+    els.TKlaer.disabled = isOff;
+  }
+
+  function update(){
+    refreshFarbRange();
+    refreshKlaerRange();
+    const c = state.consts;
+    const TFarb = parseFloat(els.TFarb.value);
+    const tFarb_s = parseFloat(els.tFarb.value) * 60;
+    const TKlaer = parseFloat(els.TKlaer.value);
+    const tKlaer_s = parseFloat(els.tKlaer.value) * 60;
+
+    TFarbVal.textContent = fmt(TFarb,1) + ' °C';
+    tFarbVal.textContent = els.tFarb.value + ' min';
+    TKlaerVal.textContent = fmt(TKlaer,1) + ' °C';
+    tKlaerVal.textContent = els.tKlaer.value + ' min' + (els.tKlaer.value==='0' ? I18N[state.lang].noClearingSuffix : '');
+
+    badge(TFarbBadge, TFarb>=60 && TFarb<=90, I18N[state.lang].badgeWarnFarb);
+    badge(TKlaerBadge, Math.abs(TKlaer-75)<=1 || Math.abs(TKlaer-90)<=1, I18N[state.lang].badgeWarnKlaer);
+
+    // Schichtdicke
+    const d = c.d0 * Math.sqrt(tFarb_s/1800) *
+      Math.exp(-(c.Ea*1000)/(2*R_GAS) * (1/(TFarb+273.15) - 1/(c.Tref_d+273.15)));
+
+    // Chelatisierungsgrad vor Klärung
+    const theta30 = clamp01(c.theta30_slope*TFarb + c.theta30_intercept);
+    const theta = clamp01(theta30 * Math.sqrt(tFarb_s/1800));
+
+    // Farbstoffmenge vor Klärung
+    const A = c.Amax * (1 - Math.exp(-d/c.satLen));
+    const pre = abFromAtheta(A, theta, c);
+    const preL = 100*Math.exp(-pre.a/c.L0);
+
+    // Klärung
+    const f = fOfMedium(state.medium, c);
+    const k = c.k0 * Math.exp(-(c.Ea_clear*1000)/R_GAS * (1/(TKlaer+273.15) - 1/(c.Tref_clear+273.15)));
+    const p = tKlaer_s>0 ? (1 - Math.exp(-k*tKlaer_s*f)) : 0;
+
+    const thetaAfter = clamp01(theta + (1-theta)*p);
+    const lossFactor = lossOfMedium(state.medium, c);
+    const Aafter = A * (1 - lossFactor*p);
+
+    const fin = abFromAtheta(Aafter, thetaAfter, c);
+    const L = 100*Math.exp(-fin.a/c.L0);
+    const Cc = Math.sqrt(fin.a*fin.a + fin.b*fin.b);
+    let h = Math.atan2(fin.b, fin.a) * 180/Math.PI;
+    if(h<0) h += 360;
+
+    const rgb = labToRgb(L, fin.a, fin.b);
+    const hex = '#' + toHex(rgb.r) + toHex(rgb.g) + toHex(rgb.b);
+
+    swatch.style.backgroundColor = hex;
+    labReadout.textContent = 'L* ' + fmt(L,1) + '  a* ' + fmt(fin.a,1) + '  b* ' + fmt(fin.b,1);
+    hexReadout.textContent = hex.toUpperCase();
+    // Textfarbe je nach Helligkeit
+    swatch.querySelector('.swatch-readout').style.color = L > 55 ? '#26211A' : '#F8F4E9';
+
+    cReadout.textContent = fmt(Cc,1);
+    hReadout.textContent = fmt(h,1) + '°';
+    gamutReadout.textContent = rgb.outOfGamut ? I18N[state.lang].gamutOut : I18N[state.lang].gamutIn;
+
+    const span = (c.hFree - c.hChel) || 1;
+    const pos = clamp01((h - c.hChel) / span);
+    hueMarker.style.left = (pos*100) + '%';
+
+    // Zwischenwerte
+    const t = I18N[state.lang];
+    const rows = [
+      [t.rowSchichtdicke, fmt(d,1) + ' µm'],
+      [t.rowThetaVor, fmt(theta*100,1) + ' %'],
+      [t.rowAVor, fmt(A,2)],
+      [t.rowLabVor, fmt(preL,1)+' / '+fmt(pre.a,1)+' / '+fmt(pre.b,1)],
+      [t.rowK, fmtExp(k,3) + ' 1/s'],
+      [t.rowP, fmt(p*100,1) + ' %'],
+      [t.rowThetaNach, fmt(thetaAfter*100,1) + ' %'],
+      [t.rowANach, fmt(Aafter,2)],
+    ];
+    detailsTable.innerHTML = rows.map(r => '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>').join('');
+  }
+
+  els.TFarb.addEventListener('input', update);
+  els.tFarb.addEventListener('input', update);
+  els.TKlaer.addEventListener('input', update);
+  els.tKlaer.addEventListener('input', update);
+
+  function setMedium(m){
+    state.medium = m;
+    btnMediumNone.classList.toggle('active', m==='none');
+    btnMediumDest.classList.toggle('active', m==='dest');
+    btnMediumTap.classList.toggle('active', m==='tap');
+    mediumTapWarning.style.display = m==='tap' ? 'block' : 'none';
+    update();
+  }
+  btnMediumNone.addEventListener('click', () => setMedium('none'));
+  btnMediumDest.addEventListener('click', () => setMedium('dest'));
+  btnMediumTap.addEventListener('click', () => setMedium('tap'));
+
+  // Konstanten-Panel aufbauen
+  const constGrid = document.getElementById('constGrid');
+  const constLabelRefs = [];
+  CONST_DEFS.forEach(def => {
+    const row = document.createElement('div');
+    row.className = 'const-item';
+    const label = document.createElement('label');
+    label.setAttribute('for', 'const-'+def.key);
+    constLabelRefs.push({def, el: label});
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.id = 'const-'+def.key;
+    input.step = def.step;
+    input.value = state.consts[def.key];
+    input.addEventListener('input', () => {
+      const v = parseFloat(input.value);
+      if(isFinite(v)) state.consts[def.key] = v;
+      update();
+    });
+    row.appendChild(label);
+    row.appendChild(input);
+    constGrid.appendChild(row);
+  });
+
+  function refreshConstLabels(){
+    constLabelRefs.forEach(({def, el}) => {
+      el.innerHTML = def.label[state.lang] + (def.unit ? ' <span class="unit">('+def.unit+')</span>' : '');
+    });
+  }
+  refreshConstLabels();
+
+  document.getElementById('resetConst').addEventListener('click', () => {
+    state.consts = Object.assign({}, DEFAULTS);
+    CONST_DEFS.forEach(def => {
+      document.getElementById('const-'+def.key).value = state.consts[def.key];
+    });
+    update();
+  });
+
+  function applyStaticI18n(){
+    const t = I18N[state.lang];
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.getAttribute('data-i18n');
+      if(t[key] !== undefined) el.textContent = t[key];
+    });
+    document.querySelectorAll('[data-i18n-html]').forEach(el => {
+      const key = el.getAttribute('data-i18n-html');
+      if(t[key] !== undefined) el.innerHTML = t[key];
+    });
+  }
+
+  function setLang(lang){
+    state.lang = lang;
+    document.documentElement.lang = lang;
+    btnLangDe.classList.toggle('active', lang==='de');
+    btnLangEn.classList.toggle('active', lang==='en');
+    applyStaticI18n();
+    refreshConstLabels();
+    update();
+  }
+
+  btnLangDe.addEventListener('click', () => setLang('de'));
+  btnLangEn.addEventListener('click', () => setLang('en'));
+
+  applyStaticI18n();
+  update();
+})();
+</script>
+</body>
+</html>

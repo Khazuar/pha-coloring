@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+<title>Krapp × tPHA – Rezeptfinder</title>
+<style>
+  :root{
+    --paper:#EAE4D6;
+    --card:#F8F4E9;
+    --card-line:#D8CEB5;
+    --ink:#26211A;
+    --ink-muted:#736A57;
+    --accent:#A6461F;
+    --accent-soft:#C97A4A;
+    --good:#4C6B4F;
+    --font-display: ui-serif, Georgia, "Times New Roman", "Noto Serif", serif;
+    --font-mono: ui-monospace, "SF Mono", "Roboto Mono", "Cascadia Mono", Consolas, monospace;
+    --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background-color:var(--paper);
+    background-image:
+      repeating-linear-gradient(0deg, rgba(38,33,26,0.05) 0px, rgba(38,33,26,0.05) 1px, transparent 1px, transparent 28px),
+      repeating-linear-gradient(90deg, rgba(38,33,26,0.05) 0px, rgba(38,33,26,0.05) 1px, transparent 1px, transparent 28px);
+    color:var(--ink);
+    font-family:var(--font-body);
+    -webkit-text-size-adjust:100%;
+  }
+  .page{max-width:520px;margin:0 auto;padding:20px 16px 48px;}
+
+  .lang-switch{display:flex;justify-content:flex-end;gap:6px;margin-bottom:14px;}
+  .lang-btn{
+    padding:4px 12px;
+    font-size:0.72rem;
+    border-radius:20px;
+    border:1px solid var(--card-line);
+    background:transparent;
+    color:var(--ink-muted);
+    font-family:var(--font-mono);
+    letter-spacing:0.04em;
+    cursor:pointer;
+  }
+  .lang-btn.active{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#F8F4E9;
+  }
+
+  header{margin-bottom:18px;}
+  h1{font-family:var(--font-display);font-size:1.6rem;margin:0 0 2px;letter-spacing:0.01em;}
+  .subtitle{margin:0;color:var(--ink-muted);font-size:0.86rem;line-height:1.4;}
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--card-line);
+    border-radius:10px;
+    padding:16px;
+    margin-bottom:16px;
+  }
+  h2{
+    font-family:var(--font-display);
+    font-size:1.02rem;
+    margin:0 0 10px;
+    padding-bottom:6px;
+    border-bottom:1px solid var(--card-line);
+  }
+
+  /* Karte */
+  .map-wrap{
+    position:relative;
+    width:100%;
+    aspect-ratio:1/1;
+    border-radius:8px;
+    overflow:hidden;
+    border:1px solid rgba(38,33,26,0.35);
+    touch-action:none;
+    cursor:crosshair;
+  }
+  .map-wrap canvas{
+    position:absolute; top:0; left:0;
+    width:100%; height:100%;
+    display:block;
+  }
+  #mapCanvas{ image-rendering:auto; }
+  .axis-label{
+    position:absolute;
+    font-size:0.68rem;
+    color:var(--ink-muted);
+    font-family:var(--font-body);
+    pointer-events:none;
+  }
+  .axis-x-left{ left:6px; bottom:6px; }
+  .axis-x-right{ right:6px; bottom:6px; text-align:right; }
+  .axis-y-top{ left:6px; top:6px; }
+  .axis-y-bottom{ left:6px; bottom:6px; }
+  .toggle-switch-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-top:12px;
+  }
+  .toggle-switch{
+    position:relative;
+    display:inline-block;
+    width:42px;
+    height:24px;
+    flex-shrink:0;
+  }
+  .toggle-switch input{
+    opacity:0;
+    width:0;
+    height:0;
+  }
+  .toggle-slider{
+    position:absolute;
+    cursor:pointer;
+    top:0;left:0;right:0;bottom:0;
+    background:var(--card-line);
+    border-radius:24px;
+    transition:background-color .15s ease;
+  }
+  .toggle-slider::before{
+    content:"";
+    position:absolute;
+    height:18px;width:18px;
+    left:3px; bottom:3px;
+    background:#fff;
+    border-radius:50%;
+    transition:transform .15s ease;
+    box-shadow:0 1px 2px rgba(0,0,0,0.25);
+  }
+  .toggle-switch input:checked + .toggle-slider{
+    background:var(--accent);
+  }
+  .toggle-switch input:checked + .toggle-slider::before{
+    transform:translateX(18px);
+  }
+  .toggle-switch-label{
+    font-size:0.86rem;
+    color:var(--ink);
+  }
+
+  .axis-hint{
+    text-align:center;
+    font-size:0.72rem;
+    color:var(--ink-muted);
+    margin-top:8px;
+    font-style:italic;
+  }
+
+  .target-input{
+    margin-top:14px;
+    padding-top:12px;
+    border-top:1px solid var(--card-line);
+  }
+  .target-input-title{
+    font-size:0.78rem;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    color:var(--ink-muted);
+    margin-bottom:8px;
+  }
+  .target-input-row{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;}
+  .target-input-field{flex:1;min-width:64px;}
+  .target-input-field label{
+    display:block;
+    font-size:0.72rem;
+    color:var(--ink-muted);
+    margin-bottom:3px;
+    font-family:var(--font-mono);
+  }
+  .target-input-field input{
+    width:100%;
+    font-family:var(--font-mono);
+    font-size:0.9rem;
+    padding:7px 6px;
+    border:1px solid var(--card-line);
+    border-radius:5px;
+    background:#fff;
+    color:var(--ink);
+  }
+  #applyTargetBtn{
+    padding:8px 14px;
+    border-radius:6px;
+    border:1px solid var(--accent);
+    background:var(--accent);
+    color:#F8F4E9;
+    font-family:var(--font-body);
+    font-size:0.86rem;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  #applyTargetBtn:active{opacity:0.85;}
+
+  .placeholder{
+    text-align:center;
+    color:var(--ink-muted);
+    font-size:0.88rem;
+    padding:18px 8px;
+    font-style:italic;
+  }
+
+  .warning-banner{
+    background:rgba(166,70,31,0.10);
+    border:1px solid var(--accent);
+    border-radius:6px;
+    padding:8px 10px;
+    font-size:0.8rem;
+    color:var(--accent);
+    margin-bottom:12px;
+  }
+
+  .swatch-row{display:flex;gap:10px;margin-bottom:14px;}
+  .swatch-col{flex:1;}
+  .swatch-box{
+    height:70px;
+    border-radius:8px;
+    border:1px solid rgba(38,33,26,0.35);
+  }
+  .swatch-label{
+    font-size:0.7rem;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    color:var(--ink-muted);
+    margin-bottom:4px;
+  }
+  .swatch-readout{
+    font-family:var(--font-mono);
+    font-size:0.78rem;
+    margin-top:4px;
+  }
+
+  .metric-row{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+  .metric-row > div{
+    flex:1;min-width:100px;
+    border:1px solid var(--card-line);
+    border-radius:6px;
+    padding:6px 8px;
+    background:rgba(255,255,255,0.35);
+  }
+  .metric-label{display:block;font-size:0.68rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--ink-muted);}
+  .metric-value{display:block;font-family:var(--font-mono);font-size:1.0rem;}
+
+  .recipe-block{
+    border:1px solid var(--card-line);
+    border-radius:8px;
+    padding:10px 12px;
+    margin-bottom:10px;
+    background:rgba(255,255,255,0.35);
+  }
+  .recipe-block .rb-title{
+    font-family:var(--font-display);
+    font-size:0.92rem;
+    margin-bottom:4px;
+  }
+  .recipe-block .rb-line{
+    font-family:var(--font-mono);
+    font-size:0.84rem;
+    line-height:1.5;
+  }
+
+  .alt-list{margin-top:6px;}
+  .alt-card{
+    border:1px dashed var(--card-line);
+    border-radius:6px;
+    padding:8px 10px;
+    margin-bottom:8px;
+    font-size:0.8rem;
+  }
+  .alt-card .alt-tag{
+    display:inline-block;
+    font-size:0.68rem;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    color:var(--accent);
+    margin-bottom:3px;
+  }
+  .alt-card .alt-line{font-family:var(--font-mono);font-size:0.8rem;}
+
+  details{margin-bottom:16px;}
+  details > summary{
+    cursor:pointer;
+    font-family:var(--font-display);
+    font-size:1.0rem;
+    padding:12px 16px;
+    background:var(--card);
+    border:1px solid var(--card-line);
+    border-radius:10px;
+    list-style:none;
+  }
+  details > summary::-webkit-details-marker{display:none;}
+  details > summary::before{content:"▸ ";color:var(--accent);}
+  details[open] > summary::before{content:"▾ ";}
+  details[open] > summary{border-radius:10px 10px 0 0;border-bottom:none;}
+  .details-body{
+    border:1px solid var(--card-line);
+    border-top:none;
+    border-radius:0 0 10px 10px;
+    padding:14px 16px;
+    background:var(--card);
+  }
+  table{width:100%;border-collapse:collapse;font-size:0.86rem;}
+  table td{padding:4px 2px;border-bottom:1px dashed var(--card-line);}
+  table td:first-child{color:var(--ink-muted);}
+  table td:last-child{font-family:var(--font-mono);text-align:right;}
+
+  .const-group-title{
+    font-size:0.76rem;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--accent);
+    margin:14px 0 6px;
+  }
+  .const-group-title:first-child{margin-top:0;}
+  .const-grid{display:flex;flex-direction:column;gap:10px;}
+  .const-item{display:flex;justify-content:space-between;align-items:center;gap:10px;}
+  .const-item label{font-size:0.82rem;flex:1;line-height:1.25;}
+  .const-item .unit{color:var(--ink-muted);font-size:0.76rem;}
+  .const-item input[type=number]{
+    width:110px;
+    font-family:var(--font-mono);
+    font-size:0.88rem;
+    padding:5px 6px;
+    border:1px solid var(--card-line);
+    border-radius:5px;
+    background:#fff;
+    color:var(--ink);
+  }
+  .reset-btn, .rebuild-btn{
+    margin-top:14px;
+    width:100%;
+    padding:10px;
+    border-radius:6px;
+    border:1px solid var(--accent);
+    background:transparent;
+    color:var(--accent);
+    font-family:var(--font-body);
+    font-size:0.88rem;
+    cursor:pointer;
+  }
+  .reset-btn:active, .rebuild-btn:active{background:var(--accent);color:#fff;}
+  .status-line{
+    font-size:0.74rem;
+    color:var(--ink-muted);
+    text-align:center;
+    margin-top:8px;
+  }
+
+  footer{margin-top:24px;font-size:0.74rem;color:var(--ink-muted);line-height:1.5;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="lang-switch" role="group" aria-label="Sprache / Language">
+    <button type="button" class="lang-btn active" id="btnLangDe">DE</button>
+    <button type="button" class="lang-btn" id="btnLangEn">EN</button>
+  </div>
+
+  <header>
+    <h1 data-i18n="title">Krapp-Rezeptfinder</h1>
+    <p class="subtitle" data-i18n="subtitle">Farbe auf der Karte wählen → automatisch ein zuverlässiges, schnelles Rezept aus dem Modell finden.</p>
+  </header>
+
+  <section class="card">
+    <h2 data-i18n="mapTitle">Farbraum-Karte</h2>
+    <div class="map-wrap" id="mapWrap">
+      <canvas id="mapCanvas"></canvas>
+      <canvas id="markerCanvas"></canvas>
+      <div class="axis-label axis-y-top" data-i18n="axisIntense">kräftig</div>
+      <div class="axis-label axis-y-bottom" data-i18n="axisLight">hell</div>
+      <div class="axis-label axis-x-left" data-i18n="axisYellow">gelb (frei)</div>
+      <div class="axis-label axis-x-right" data-i18n="axisRed">rot (Ti-Chelat)</div>
+    </div>
+    <div class="axis-hint" data-i18n="axisHint">Antippen oder mit dem Finger ziehen, um eine Zielfarbe zu wählen.</div>
+
+    <div class="toggle-switch-row">
+      <label class="toggle-switch">
+        <input type="checkbox" id="directOnlyToggle">
+        <span class="toggle-slider"></span>
+      </label>
+      <span class="toggle-switch-label" data-i18n="directOnlyLabel">nur Direktrezepte</span>
+    </div>
+
+    <div class="target-input">
+      <div class="target-input-title" data-i18n="targetInputTitle">Ziel exakt eingeben (Lab)</div>
+      <div class="target-input-row">
+        <div class="target-input-field">
+          <label for="inputL">L*</label>
+          <input type="number" id="inputL" step="0.1" min="0" max="100">
+        </div>
+        <div class="target-input-field">
+          <label for="inputA">a*</label>
+          <input type="number" id="inputA" step="0.1">
+        </div>
+        <div class="target-input-field">
+          <label for="inputB">b*</label>
+          <input type="number" id="inputB" step="0.1">
+        </div>
+        <button type="button" id="applyTargetBtn" data-i18n="searchButton">Suchen</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="resultCard">
+    <h2 data-i18n="resultTitle">Ergebnis</h2>
+    <div id="placeholderMsg" class="placeholder" data-i18n="placeholder">Noch keine Zielfarbe gewählt.</div>
+    <div id="resultBody" style="display:none;">
+      <div id="warningArea"></div>
+      <div class="swatch-row">
+        <div class="swatch-col">
+          <div class="swatch-label" data-i18n="targetLabel">Ziel</div>
+          <div class="swatch-box" id="targetSwatch"></div>
+          <div class="swatch-readout" id="targetReadout"></div>
+        </div>
+        <div class="swatch-col">
+          <div class="swatch-label" data-i18n="achievedLabel">Empfohlenes Rezept</div>
+          <div class="swatch-box" id="achievedSwatch"></div>
+          <div class="swatch-readout" id="achievedReadout"></div>
+        </div>
+      </div>
+      <div class="metric-row">
+        <div><span class="metric-label" data-i18n="metricDE">ΔE zum Ziel</span><span class="metric-value" id="dEReadout">–</span></div>
+        <div><span class="metric-label" data-i18n="metricSens">Empfindlichkeit (±σ)</span><span class="metric-value" id="robustReadout">–</span></div>
+        <div><span class="metric-label" data-i18n="metricEffort">Aufwand</span><span class="metric-value" id="effortReadout">–</span></div>
+        <div><span class="metric-label" data-i18n="metricTime">Gesamtdauer</span><span class="metric-value" id="timeReadout">–</span></div>
+      </div>
+      <div class="recipe-block" id="recommendedBlock"></div>
+      <div class="alt-list" id="altList"></div>
+    </div>
+  </section>
+
+  <details id="detailsPanel">
+    <summary data-i18n="detailsSummary">Zwischenwerte des empfohlenen Rezepts</summary>
+    <div class="details-body">
+      <table id="detailsTable"></table>
+    </div>
+  </details>
+
+  <details>
+    <summary data-i18n="constSummary">Konstanten bearbeiten</summary>
+    <div class="details-body">
+      <div class="const-grid" id="constGrid"></div>
+      <button type="button" class="reset-btn" id="resetConst" data-i18n="resetButton">Auf Standardwerte zurücksetzen</button>
+      <button type="button" class="rebuild-btn" id="rebuildBtn" data-i18n="rebuildButton">Rezept-Raster neu berechnen</button>
+      <div class="status-line" id="statusLine"></div>
+    </div>
+  </details>
+
+  <footer data-i18n-html="footer">
+    Rezeptsuche über ein Raster aus praxisnahen Temperatur-/Zeitstufen (5°-Schritte, Zeiten von 30s bis 6h,
+    unter 10min in 1-Minuten-Schritten), begrenzt durch dieselben Sondiertiefen-/Klärgrad-Grenzen wie im
+    Vorhersage-Tool. „Erreichbar" heißt: ein
+    Rasterrezept liegt innerhalb von ΔE&nbsp;≤&nbsp;2,3 (Schwelle für „gerade eben sichtbarer Unterschied", CIE76,
+    editierbar). Empfindlichkeit misst per Störrechnung mit ±σ_T (Temperatur) und ±σ_t (Zeit) auf Färbung und
+    Klärung, wie stark die Farbe bei kleinen Abweichungen kippt — niedriger ist besser. Empfehlung: unter allen
+    ausreichend unempfindlichen Rezepten in einem Zeit-Toleranzband (Standard 15&nbsp;% über dem schnellsten
+    davon) wird die beste Kombination aus Empfindlichkeit und Aufwand gewählt — nicht stur das schnellste.
+  </footer>
+
+</div>
+
+
+<script>
+(function(){
+  "use strict";
+
+  const R_GAS = 8.314;
+  const FLOOR_FARB_MIN = 5, CEIL_FARB_MIN = 720;
+  const FLOOR_KLAER_MIN = 3, CEIL_KLAER_MIN = 720;
+  const T_STEPS = [55,60,65,70,75,80,85,90,95];
+  const TIME_CANDIDATES_MIN = [0.5,1,2,3,4,5,6,7,8,9,10,15,20,30,45,60,90,120,180,240,300,360];
+  const MAX_TIME_CANDIDATE_MIN = TIME_CANDIDATES_MIN[TIME_CANDIDATES_MIN.length-1];
+
+  const MAP_RES = 180;
+
+  const DEFAULTS = {
+    d0: 80, Tref_d: 85, Ea: 66.8,
+    theta30_slope: 0.01847, theta30_intercept: -1.0936,
+    Amax: 15.62, satLen: 32.4,
+    hFree: 70.4, hChel: 29.8, strength: 2.504, L0: 88.19,
+    k0: 4.561e-4, Tref_clear: 75, Ea_clear: 53.7,
+    loss_wet: 0.286, loss_dry: 0.089, f_dry: 0.29,
+    probeDepth: 93.4, probeMarginPct: 10, clearDonePct: 99.5,
+    jndThreshold: 2.3, robustThreshold: 1.6, sigma_t: 10, sigma_T: 2,
+    timeSlackPct: 15, simplicityWeight: 0.5, speedAltFraction: 0.5,
+    simplicityClearPenalty: 1.0, simplicitySameTBonus: 0.5, simplicityTempWeight: 0.01,
+    simplicityTimeWeight: 0.01
+  };
+
+  const CONST_DEFS = [
+    {key:'d0', label:{de:'d₀ — Schichtdicke bei Referenztemperatur', en:'d₀ — layer thickness at reference temperature'}, unit:'µm', step:0.1, group:{de:'Modell: Färbung', en:'Model: dyeing'}},
+    {key:'Tref_d', label:{de:'Referenztemperatur für d₀', en:'Reference temperature for d₀'}, unit:'°C', step:0.5, group:{de:'Modell: Färbung', en:'Model: dyeing'}},
+    {key:'Ea', label:{de:'Eₐ — Aktivierungsenergie Diffusion', en:'Eₐ — activation energy, diffusion'}, unit:'kJ/mol', step:0.1, group:{de:'Modell: Färbung', en:'Model: dyeing'}},
+    {key:'theta30_slope', label:{de:'θ₃₀ — Steigung', en:'θ₃₀ — slope'}, unit:'1/°C', step:0.0001, group:{de:'Modell: Färbung', en:'Model: dyeing'}},
+    {key:'theta30_intercept', label:{de:'θ₃₀ — Achsenabschnitt', en:'θ₃₀ — intercept'}, unit:'', step:0.0001, group:{de:'Modell: Färbung', en:'Model: dyeing'}},
+    {key:'Amax', label:{de:'A_max — max. Farbstoffmenge', en:'A_max — max. dye amount'}, unit:'a.u.', step:0.01, group:{de:'Modell: Farbe', en:'Model: color'}},
+    {key:'satLen', label:{de:'Sättigungslänge (A vs. d)', en:'Saturation length (A vs. d)'}, unit:'µm', step:0.1, group:{de:'Modell: Farbe', en:'Model: color'}},
+    {key:'hFree', label:{de:'Hue freies Alizarin', en:'Hue, free alizarin'}, unit:'°', step:0.1, group:{de:'Modell: Farbe', en:'Model: color'}},
+    {key:'hChel', label:{de:'Hue Ti-Chelat', en:'Hue, Ti chelate'}, unit:'°', step:0.1, group:{de:'Modell: Farbe', en:'Model: color'}},
+    {key:'strength', label:{de:'Relative Farbstärke Chelat/frei', en:'Relative color strength, chelate/free'}, unit:'', step:0.001, group:{de:'Modell: Farbe', en:'Model: color'}},
+    {key:'L0', label:{de:'L*-Divisor', en:'L* divisor'}, unit:'', step:0.01, group:{de:'Modell: Farbe', en:'Model: color'}},
+    {key:'k0', label:{de:'k₀ — Klärkonstante bei Referenztemp.', en:'k₀ — clearing rate constant at reference temp.'}, unit:'1/s', step:0.00001, group:{de:'Modell: Klärung', en:'Model: clearing'}},
+    {key:'Tref_clear', label:{de:'Referenztemperatur für k₀', en:'Reference temperature for k₀'}, unit:'°C', step:0.5, group:{de:'Modell: Klärung', en:'Model: clearing'}},
+    {key:'Ea_clear', label:{de:'Eₐ — Aktivierungsenergie Klärung', en:'Eₐ — activation energy, clearing'}, unit:'kJ/mol', step:0.1, group:{de:'Modell: Klärung', en:'Model: clearing'}},
+    {key:'loss_wet', label:{de:'Substanzverlust-Faktor (dest./Leitungswasser)', en:'Substance loss factor (distilled/tap water)'}, unit:'', step:0.001, group:{de:'Modell: Klärung', en:'Model: clearing'}},
+    {key:'loss_dry', label:{de:'Substanzverlust-Faktor (kein Medium)', en:'Substance loss factor (no medium)'}, unit:'', step:0.001, group:{de:'Modell: Klärung', en:'Model: clearing'}},
+    {key:'f_dry', label:{de:'Klär-Geschwindigkeitsfaktor f (kein Medium)', en:'Clearing rate factor f (no medium)'}, unit:'', step:0.01, group:{de:'Modell: Klärung', en:'Model: clearing'}},
+    {key:'probeDepth', label:{de:'Optische Sondiertiefe', en:'Optical probe depth'}, unit:'µm', step:0.5, group:{de:'Werkzeug-Grenzen', en:'Tool limits'}},
+    {key:'probeMarginPct', label:{de:'Zeitreserve auf Sondiertiefe (Färbung)', en:'Time margin on probe depth (dyeing)'}, unit:'%', step:0.5, group:{de:'Werkzeug-Grenzen', en:'Tool limits'}},
+    {key:'clearDonePct', label:{de:'Klärung gilt als fertig ab', en:'Clearing counts as done above'}, unit:'%', step:0.1, group:{de:'Werkzeug-Grenzen', en:'Tool limits'}},
+    {key:'jndThreshold', label:{de:'ΔE-Schwelle „gerade sichtbar" (JND)', en:'ΔE threshold "just noticeable" (JND)'}, unit:'', step:0.1, group:{de:'Rezeptsuche', en:'Recipe search'}},
+    {key:'robustThreshold', label:{de:'ΔE-Schwelle „nicht zu empfindlich"', en:'ΔE threshold "not too sensitive"'}, unit:'', step:0.05, group:{de:'Rezeptsuche', en:'Recipe search'}},
+    {key:'sigma_t', label:{de:'Angenommene Zeitunsicherheit σ_t', en:'Assumed time uncertainty σ_t'}, unit:'s', step:1, group:{de:'Rezeptsuche', en:'Recipe search'}},
+    {key:'sigma_T', label:{de:'Angenommene Temperaturunsicherheit σ_T', en:'Assumed temperature uncertainty σ_T'}, unit:'°C', step:0.5, group:{de:'Rezeptsuche', en:'Recipe search'}},
+    {key:'timeSlackPct', label:{de:'Zeit-Toleranz über dem schnellsten ausreichend unempfindlichen Rezept', en:'Time tolerance above the fastest sufficiently insensitive recipe'}, unit:'%', step:1, group:{de:'Aufwand', en:'Effort'}},
+    {key:'speedAltFraction', label:{de:'Zeitanteil für „deutlich schneller"-Alternative', en:'Time fraction for "notably faster" alternative'}, unit:'', step:0.05, group:{de:'Aufwand', en:'Effort'}},
+    {key:'simplicityWeight', label:{de:'Gewicht des Aufwands ggü. Empfindlichkeit', en:'Weight of effort vs. sensitivity'}, unit:'', step:0.05, group:{de:'Aufwand', en:'Effort'}},
+    {key:'simplicityClearPenalty', label:{de:'Aufwands-Strafe für ein zweites Bad (Klärung)', en:'Effort penalty for a second bath (clearing)'}, unit:'', step:0.05, group:{de:'Aufwand', en:'Effort'}},
+    {key:'simplicitySameTBonus', label:{de:'Bonus bei gleicher Färbe-/Klärtemperatur', en:'Bonus for matching dye/clear temperature'}, unit:'', step:0.05, group:{de:'Aufwand', en:'Effort'}},
+    {key:'simplicityTempWeight', label:{de:'Strafe pro °C über 55°C (Energie/Komfort)', en:'Penalty per °C above 55°C (energy/comfort)'}, unit:'', step:0.001, group:{de:'Aufwand', en:'Effort'}},
+    {key:'simplicityTimeWeight', label:{de:'Strafe pro Minute Gesamtdauer (30 min ≈ überschaubar)', en:'Penalty per minute of total time (30 min ≈ manageable)'}, unit:'', step:0.001, group:{de:'Aufwand', en:'Effort'}},
+  ];
+
+  const I18N = {
+    de: {
+      title: 'Krapp-Rezeptfinder',
+      subtitle: 'Farbe auf der Karte wählen → automatisch ein zuverlässiges, schnelles Rezept aus dem Modell finden.',
+      mapTitle: 'Farbraum-Karte',
+      axisIntense: 'kräftig', axisLight: 'hell', axisYellow: 'gelb (frei)', axisRed: 'rot (Ti-Chelat)',
+      axisHint: 'Antippen oder mit dem Finger ziehen, um eine Zielfarbe zu wählen.',
+      directOnlyLabel: 'nur Direktrezepte',
+      targetInputTitle: 'Ziel exakt eingeben (Lab)',
+      searchButton: 'Suchen',
+      resultTitle: 'Ergebnis',
+      placeholder: 'Noch keine Zielfarbe gewählt.',
+      targetLabel: 'Ziel',
+      achievedLabel: 'Empfohlenes Rezept',
+      metricDE: 'ΔE zum Ziel',
+      metricSens: 'Empfindlichkeit (±σ)',
+      metricEffort: 'Aufwand',
+      metricTime: 'Gesamtdauer',
+      detailsSummary: 'Zwischenwerte des empfohlenen Rezepts',
+      constSummary: 'Konstanten bearbeiten',
+      resetButton: 'Auf Standardwerte zurücksetzen',
+      rebuildButton: 'Rezept-Raster neu berechnen',
+      statusLine: (n,ms) => n+' Rezepte im Raster · '+ms+' ms',
+      recommendedTag: 'Empfohlen',
+      dyeingLine: (T,t) => 'Färbung: '+T+' °C, '+t,
+      clearingLine: (T,t,mediumLabel) => 'Klärung: '+T+' °C, '+t+' ('+mediumLabel+')',
+      clearingNone: 'Klärung: keine',
+      mediumNames: {none:'kein Medium', dest:'destilliertes Wasser', tap:'Leitungswasser'},
+      noteNoClear: 'kein zweites Bad nötig',
+      noteSameT: 'gleiche Temperatur wie Färbung',
+      tagFastest: 'Am schnellsten', tagSimplest: 'Am einfachsten', tagClosest: 'Farblich am nächsten', tagFasterAlt: 'Deutlich schneller (größerer Abstand)',
+      altLine: (dE,sens,eff,time) => 'ΔE='+dE+' · Empfindlichkeit='+sens+' · Aufwand='+eff+' · '+time,
+      warnUnreachable: dE => 'Zielfarbe liegt außerhalb des mit diesem Modell erreichbaren Bereichs. Nächstliegende Option gezeigt (ΔE='+dE+').',
+      warnFallback: (thr,sT,st) => 'Kein Rezept in Farbnähe erfüllt das Empfindlichkeits-Budget (ΔE≤'+thr+' bei ±'+sT+'°C/±'+st+'s). Unempfindlichste verfügbare Option gezeigt.',
+      rowTheta: 'θ (Ergebnis)', rowA: 'A (Ergebnis)', rowDE: 'ΔE zum Ziel',
+      rowSens: 'Empfindlichkeit (±σ_T/±σ_t)', rowEffort: 'Aufwands-Score', rowEffortSuffix: ' (niedriger = weniger Aufwand)',
+      rowTime: 'Gesamtdauer', rowCandidates: 'Kandidaten geprüft',
+      footer: 'Rezeptsuche über ein Raster aus praxisnahen Temperatur-/Zeitstufen (5°-Schritte, Zeiten von 30s bis 6h, '
+            + 'unter 10min in 1-Minuten-Schritten), begrenzt durch dieselben Sondiertiefen-/Klärgrad-Grenzen wie im '
+            + 'Vorhersage-Tool. „Erreichbar" heißt: ein Rasterrezept liegt innerhalb von ΔE&nbsp;≤&nbsp;2,3 (Schwelle für '
+            + '„gerade eben sichtbarer Unterschied", CIE76, editierbar). Empfindlichkeit misst per Störrechnung mit ±σ_T '
+            + '(Temperatur) und ±σ_t (Zeit) auf Färbung und Klärung, wie stark die Farbe bei kleinen Abweichungen kippt — '
+            + 'niedriger ist besser. Empfehlung: unter allen ausreichend unempfindlichen Rezepten in einem Zeit-Toleranzband '
+            + '(Standard 15&nbsp;% über dem schnellsten davon) wird die beste Kombination aus Empfindlichkeit und Aufwand '
+            + 'gewählt — nicht stur das schnellste. Leitungswasser wird als Klärmedium bewusst nicht vorgeschlagen: '
+            + 'Härtegrad und Mineralgehalt schwanken je nach Wohnort und sind nicht reproduzierbar — für belastbare '
+            + 'Rezepte ungeeignet (im Vorhersage-Tool weiterhin mit Warnhinweis wählbar).',
+    },
+    en: {
+      title: 'Madder Recipe Finder',
+      subtitle: 'Pick a color on the map → automatically find a reliable, fast recipe from the model.',
+      mapTitle: 'Color space map',
+      axisIntense: 'intense', axisLight: 'light', axisYellow: 'yellow (free)', axisRed: 'red (Ti chelate)',
+      axisHint: 'Tap or drag with your finger to choose a target color.',
+      directOnlyLabel: 'direct recipes only',
+      targetInputTitle: 'Enter target precisely (Lab)',
+      searchButton: 'Search',
+      resultTitle: 'Result',
+      placeholder: 'No target color chosen yet.',
+      targetLabel: 'Target',
+      achievedLabel: 'Recommended recipe',
+      metricDE: 'ΔE to target',
+      metricSens: 'Sensitivity (±σ)',
+      metricEffort: 'Effort',
+      metricTime: 'Total time',
+      detailsSummary: 'Intermediate values of the recommended recipe',
+      constSummary: 'Edit constants',
+      resetButton: 'Reset to default values',
+      rebuildButton: 'Recompute recipe grid',
+      statusLine: (n,ms) => n+' recipes in grid · '+ms+' ms',
+      recommendedTag: 'Recommended',
+      dyeingLine: (T,t) => 'Dyeing: '+T+' °C, '+t,
+      clearingLine: (T,t,mediumLabel) => 'Clearing: '+T+' °C, '+t+' ('+mediumLabel+')',
+      clearingNone: 'Clearing: none',
+      mediumNames: {none:'no medium', dest:'distilled water', tap:'tap water'},
+      noteNoClear: 'no second bath needed',
+      noteSameT: 'same temperature as dyeing',
+      tagFastest: 'Fastest', tagSimplest: 'Least effort', tagClosest: 'Closest color match', tagFasterAlt: 'Notably faster (larger gap)',
+      altLine: (dE,sens,eff,time) => 'ΔE='+dE+' · Sensitivity='+sens+' · Effort='+eff+' · '+time,
+      warnUnreachable: dE => 'Target color lies outside the range achievable with this model. Closest option shown (ΔE='+dE+').',
+      warnFallback: (thr,sT,st) => 'No recipe near this color meets the sensitivity budget (ΔE≤'+thr+' at ±'+sT+'°C/±'+st+'s). Least sensitive available option shown.',
+      rowTheta: 'θ (result)', rowA: 'A (result)', rowDE: 'ΔE to target',
+      rowSens: 'Sensitivity (±σ_T/±σ_t)', rowEffort: 'Effort score', rowEffortSuffix: ' (lower = less effort)',
+      rowTime: 'Total time', rowCandidates: 'Candidates checked',
+      footer: 'Recipe search over a grid of practical temperature/time steps (5° steps, times from 30s to 6h, '
+            + '1-minute steps below 10min), bounded by the same probe-depth/clearing-degree limits as the prediction '
+            + 'tool. "Reachable" means: a grid recipe lies within ΔE&nbsp;≤&nbsp;2.3 (threshold for "just noticeable '
+            + 'difference", CIE76, editable). Sensitivity is measured by perturbation with ±σ_T (temperature) and '
+            + '±σ_t (time) on dyeing and clearing — how much the color shifts under small deviations — lower is better. '
+            + 'Recommendation: among all sufficiently insensitive recipes within a time-tolerance band (default 15&nbsp;% '
+            + 'above the fastest of those), the best combination of sensitivity and effort is chosen — not simply the fastest. '
+            + 'Tap water is deliberately not offered as a clearing medium: hardness and mineral content vary by location '
+            + 'and are not reproducible — unsuitable for dependable recipes (still selectable with a warning in the prediction tool).',
+    }
+  };
+
+  const state = {
+    lang: 'de',
+    consts: Object.assign({}, DEFAULTS),
+    recipes: [],
+    activeRecipes: [],
+    reachMask: null,
+    directOnly: false
+  };
+
+  const clamp01 = x => Math.max(0, Math.min(1, x));
+
+  function fmt(n, digits){
+    if(!isFinite(n)) return "–";
+    const s = n.toFixed(digits);
+    return state.lang==='de' ? s.replace('.', ',') : s;
+  }
+
+  function fmtTime(min){
+    if(min < 60) return fmt(Math.round(min*10)/10, (min%1===0)?0:1) + ' min';
+    const h = Math.floor(min/60);
+    const m = Math.round(min - h*60);
+    return m===0 ? h+' h' : h+' h '+m+' min';
+  }
+
+  // ---------- Kernmodell (identisch zum Vorhersage-Tool) ----------
+  function theta30(T,c){ return Math.max(0, c.theta30_slope*T + c.theta30_intercept); }
+  function dOf(T,t,c){ return c.d0*Math.sqrt(t/1800)*Math.exp(-(c.Ea*1000)/(2*R_GAS)*(1/(T+273.15)-1/(c.Tref_d+273.15))); }
+  function AOfD(d,c){ return c.Amax*(1-Math.exp(-d/c.satLen)); }
+  function thetaBefore(T,t,c){ return clamp01(theta30(T,c)*Math.sqrt(t/1800)); }
+  function labFrom(A,theta,c){
+    const kaf=1, kac=c.strength;
+    const kbf=Math.tan(c.hFree*Math.PI/180);
+    const kbc=c.strength*Math.tan(c.hChel*Math.PI/180);
+    const a=A*((1-theta)*kaf+theta*kac);
+    const b=A*((1-theta)*kbf+theta*kbc);
+    return {L:100*Math.exp(-a/c.L0), a, b};
+  }
+  function kOf(T,c){ return c.k0*Math.exp(-(c.Ea_clear*1000)/R_GAS*(1/(T+273.15)-1/(c.Tref_clear+273.15))); }
+  function fOfMedium(medium,c){
+    if(medium==='none') return c.f_dry;
+    return 1; // 'dest'
+  }
+  function lossOfMedium(medium,c){
+    return medium==='none' ? c.loss_dry : c.loss_wet;
+  }
+  function pOf(T,t,medium,c){ const f = fOfMedium(medium,c); return 1-Math.exp(-kOf(T,c)*t*f); }
+
+  function farbMaxMinutes(T,c){
+    const dAtRef = c.d0*Math.exp(-(c.Ea*1000)/(2*R_GAS)*(1/(T+273.15)-1/(c.Tref_d+273.15)));
+    const probe = Math.max(0.1,c.probeDepth)*(1+c.probeMarginPct/100);
+    if(dAtRef<=0) return CEIL_FARB_MIN;
+    const tMin = (1800*Math.pow(probe/dAtRef,2))/60;
+    return Math.max(FLOOR_FARB_MIN, Math.min(CEIL_FARB_MIN, tMin));
+  }
+  function klaerMaxMinutes(T,medium,c){
+    const f = fOfMedium(medium,c);
+    const k = kOf(T,c);
+    const target = Math.min(0.999, Math.max(0.01, c.clearDonePct/100));
+    if(k<=0) return CEIL_KLAER_MIN;
+    const tMin = (-Math.log(1-target)/(k*f))/60;
+    return Math.max(FLOOR_KLAER_MIN, Math.min(CEIL_KLAER_MIN, tMin));
+  }
+
+  function deltaE(l1,l2){
+    return Math.sqrt((l1.L-l2.L)**2 + (l1.a-l2.a)**2 + (l1.b-l2.b)**2);
+  }
+
+  function labToRgb(L, a, b){
+    const refX=95.047, refY=100.0, refZ=108.883;
+    let y=(L+16)/116, x=a/500+y, z=y-b/200;
+    function finv(t){ const t3=t*t*t; return t3>0.008856 ? t3 : (t-16/116)/7.787; }
+    const X = refX*finv(x)/100, Y = refY*finv(y)/100, Z = refZ*finv(z)/100;
+    let r =  X*3.2406 + Y*-1.5372 + Z*-0.4986;
+    let g =  X*-0.9689 + Y*1.8758 + Z*0.0415;
+    let bl = X*0.0557 + Y*-0.2040 + Z*1.0570;
+    function gamma(c){ return c>0.0031308 ? 1.055*Math.pow(c,1/2.4)-0.055 : 12.92*c; }
+    r=gamma(r); g=gamma(g); bl=gamma(bl);
+    const clamp = c => Math.max(0, Math.min(1, c));
+    return { r: Math.round(clamp(r)*255), g: Math.round(clamp(g)*255), b: Math.round(clamp(bl)*255) };
+  }
+  function toHex(v){ return v.toString(16).padStart(2,'0'); }
+
+  // ---------- Raster ----------
+  function buildTimeList(maxMin){
+    // Rasterexploration ist bewusst bei MAX_TIME_CANDIDATE_MIN gedeckelt (Nutzer-Vorgabe),
+    // auch wenn die physikalische Grenze (probeDepth/clearDonePct) theoretisch weiter reicht.
+    const cappedMax = Math.min(maxMin, MAX_TIME_CANDIDATE_MIN);
+    const list = TIME_CANDIDATES_MIN.filter(t => t<=cappedMax);
+    const roundedMax = Math.round(cappedMax*10)/10;
+    if(list.length===0 || list[list.length-1] < roundedMax-0.05) list.push(roundedMax);
+    return list;
+  }
+
+  function buildGrid(c){
+    const recipes = [];
+    for(const T of T_STEPS){
+      const fmax = farbMaxMinutes(T,c);
+      const times = buildTimeList(fmax);
+      for(const tmin of times){
+        const t = tmin*60;
+        const d = dOf(T,t,c);
+        const A = AOfD(d,c);
+        const theta = thetaBefore(T,t,c);
+        const lab = labFrom(A,theta,c);
+        recipes.push({Tdye:T, tdye:tmin, Tklaer:null, tklaer:null, medium:null, theta, A, lab, totalTime:tmin*60});
+        for(const Tk of T_STEPS){
+          for(const medium of ['dest','none']){
+            const kmax = klaerMaxMinutes(Tk,medium,c);
+            const times2 = buildTimeList(kmax);
+            for(const tkmin of times2){
+              const tk = tkmin*60;
+              const p = pOf(Tk,tk,medium,c);
+              const thetaA = theta + (1-theta)*p;
+              const loss = lossOfMedium(medium,c);
+              const A2 = A*(1-loss*p);
+              const lab2 = labFrom(A2,thetaA,c);
+              recipes.push({Tdye:T, tdye:tmin, Tklaer:Tk, tklaer:tkmin, medium, theta:thetaA, A:A2, lab:lab2, totalTime:tmin*60+tkmin*60});
+            }
+          }
+        }
+      }
+    }
+    return recipes;
+  }
+
+  // Erreichbarkeits-Maske direkt aus den Rasterpunkten (statt einer Spalten-Obergrenze):
+  // jeder echte Rasterpunkt markiert seine eigene Kartenzelle, eine kleine Ausdehnung (REACH_RADIUS)
+  // deckt Zwischenraeume zwischen benachbarten Zeitstufen ab, OHNE Luecken zwischen verschiedenen
+  // Temperaturkurven faelschlich zu fuellen (das war der Fehler der alten Spalten-Obergrenze).
+  const REACH_RADIUS = 3;
+  function buildReachMask(recipes,c){
+    const mask = new Uint8Array(MAP_RES*MAP_RES);
+    for(const r of recipes){
+      const x = Math.round(r.theta*(MAP_RES-1));
+      const y = Math.round((1 - r.A/c.Amax)*(MAP_RES-1));
+      if(x>=0 && x<MAP_RES && y>=0 && y<MAP_RES) mask[y*MAP_RES+x] = 1;
+    }
+    const dilated = new Uint8Array(MAP_RES*MAP_RES);
+    const R2 = REACH_RADIUS*REACH_RADIUS;
+    for(let y=0;y<MAP_RES;y++){
+      for(let x=0;x<MAP_RES;x++){
+        if(!mask[y*MAP_RES+x]) continue;
+        for(let dy=-REACH_RADIUS; dy<=REACH_RADIUS; dy++){
+          const ny=y+dy; if(ny<0||ny>=MAP_RES) continue;
+          for(let dx=-REACH_RADIUS; dx<=REACH_RADIUS; dx++){
+            const nx=x+dx; if(nx<0||nx>=MAP_RES) continue;
+            if(dx*dx+dy*dy<=R2) dilated[ny*MAP_RES+nx]=1;
+          }
+        }
+      }
+    }
+    return dilated;
+  }
+
+  // ---------- Empfindlichkeit ----------
+  function robustnessOf(r,c){
+    const dT=[0,-c.sigma_T,c.sigma_T];
+    const dt=[0,-c.sigma_t,c.sigma_t];
+    let worst=0;
+    if(r.Tklaer===null){
+      for(const a of dT) for(const b of dt){
+        if(a===0 && b===0) continue;
+        const T=r.Tdye+a, t=Math.max(1, r.tdye*60+b);
+        const d=dOf(T,t,c); const A=AOfD(d,c);
+        const theta=clamp01(theta30(T,c)*Math.sqrt(t/1800));
+        const lab=labFrom(A,theta,c);
+        const e=deltaE(r.lab,lab);
+        if(e>worst) worst=e;
+      }
+    } else {
+      for(const a1 of dT) for(const b1 of dt) for(const a2 of dT) for(const b2 of dt){
+        if(a1===0&&b1===0&&a2===0&&b2===0) continue;
+        const T=r.Tdye+a1, t=Math.max(1, r.tdye*60+b1);
+        const Tk=r.Tklaer+a2, tk=Math.max(1, r.tklaer*60+b2);
+        const d=dOf(T,t,c); const A=AOfD(d,c);
+        const theta=clamp01(theta30(T,c)*Math.sqrt(t/1800));
+        const p=pOf(Tk,tk,r.medium,c);
+        const thetaA=theta+(1-theta)*p;
+        const loss = lossOfMedium(r.medium,c);
+        const A2=A*(1-loss*p);
+        const lab=labFrom(A2,thetaA,c);
+        const e=deltaE(r.lab,lab);
+        if(e>worst) worst=e;
+      }
+    }
+    return worst;
+  }
+
+  function simplicityOf(r,c){
+    let penalty = c.simplicityTempWeight * Math.max(0, r.Tdye - 55);
+    if(r.Tklaer !== null){
+      penalty += c.simplicityClearPenalty;
+      if(r.Tklaer === r.Tdye) penalty -= c.simplicitySameTBonus;
+      penalty += c.simplicityTempWeight * Math.max(0, r.Tklaer - 55);
+    }
+    penalty += c.simplicityTimeWeight * (r.totalTime/60); // totalTime in s, Gewicht ist pro Minute
+    return Math.max(0, penalty);
+  }
+
+  function recipeSignature(r){
+    return r.Tdye+'|'+r.tdye+'|'+r.Tklaer+'|'+r.tklaer+'|'+r.medium;
+  }
+
+  function selectBest(targetLab, recipes, c){
+    let within = [];
+    for(const r of recipes){
+      r.dE = deltaE(r.lab, targetLab);
+      if(r.dE <= c.jndThreshold) within.push(r);
+    }
+    const reachable = within.length>0;
+    let pool;
+    if(reachable){
+      within.sort((x,y)=>x.dE-y.dE);
+      pool = within.slice(0,60);
+    } else {
+      // Seltener Fall: kein Rezept innerhalb der Toleranz -> vollstaendig sortieren, um die naechsten zu finden
+      const scored = recipes.slice().sort((x,y)=>x.dE-y.dE);
+      pool = scored.slice(0,20);
+    }
+    for(const r of pool){
+      r.robust = robustnessOf(r,c);
+      r.simplicity = simplicityOf(r,c);
+    }
+    const robustEnough = pool.filter(x=>x.robust<=c.robustThreshold);
+    let usedFallback=false, recommended;
+    if(robustEnough.length>0){
+      // schnellstes ausreichend unempfindliches Rezept als Referenz, dann innerhalb eines Zeit-Toleranzbands
+      // dasjenige mit dem besten Empfindlichkeits-/Aufwands-Kompromiss waehlen
+      const fastestTime = Math.min(...robustEnough.map(x=>x.totalTime));
+      const band = robustEnough.filter(x=>x.totalTime <= fastestTime*(1+c.timeSlackPct/100));
+      recommended = band.reduce((best,x)=>{
+        const scoreX = x.robust + c.simplicityWeight*x.simplicity;
+        const scoreBest = best.robust + c.simplicityWeight*best.simplicity;
+        return scoreX < scoreBest ? x : best;
+      });
+    } else {
+      usedFallback=true;
+      recommended = pool.reduce((best,x)=>x.robust<best.robust?x:best);
+    }
+    const fastest = pool.reduce((best,x)=>x.totalTime<best.totalTime?x:best);
+    const simplest = pool.reduce((best,x)=>{
+      if(x.simplicity<best.simplicity) return x;
+      if(x.simplicity===best.simplicity && x.totalTime<best.totalTime) return x;
+      return best;
+    });
+    const closest = pool[0];
+
+    // Deutlich schnellere Alternative: bewusst AUSSERHALB des dE-Toleranzbereichs gesucht,
+    // damit robuste-aber-langsame Empfehlungen nicht die einzige Option sind (Nutzer-Feedback:
+    // eine "schnell, aber ungenauer"-Option soll immer sichtbar sein, nicht nur die optimale).
+    const speedCutoff = recommended.totalTime * c.speedAltFraction;
+    let fasterAlt = null;
+    if(speedCutoff >= 1){
+      for(const r of recipes){ // volle aktive Menge, r.dE bereits oben berechnet
+        if(r.totalTime <= speedCutoff){
+          if(fasterAlt===null || r.dE < fasterAlt.dE) fasterAlt = r;
+        }
+      }
+    }
+
+    if(fasterAlt){
+      fasterAlt.robust = robustnessOf(fasterAlt,c);
+      fasterAlt.simplicity = simplicityOf(fasterAlt,c);
+    }
+
+    return {recommended, fastest, simplest, closest, fasterAlt, reachable, usedFallback, pool};
+  }
+
+  // ---------- Rendering ----------
+  const mapCanvas = document.getElementById('mapCanvas');
+  const markerCanvas = document.getElementById('markerCanvas');
+  const mapWrap = document.getElementById('mapWrap');
+
+  function renderMap(){
+    mapCanvas.width = MAP_RES; mapCanvas.height = MAP_RES;
+    const ctx = mapCanvas.getContext('2d');
+    const img = ctx.createImageData(MAP_RES, MAP_RES);
+    const c = state.consts;
+    for(let y=0;y<MAP_RES;y++){
+      const A = c.Amax * (1 - y/(MAP_RES-1));
+      for(let x=0;x<MAP_RES;x++){
+        const theta = x/(MAP_RES-1);
+        const idx = (y*MAP_RES+x)*4;
+        if(!state.reachMask[y*MAP_RES+x]){
+          img.data[idx]=224; img.data[idx+1]=219; img.data[idx+2]=206; img.data[idx+3]=255;
+        } else {
+          const lab = labFrom(A, theta, c);
+          const rgb = labToRgb(lab.L, lab.a, lab.b);
+          img.data[idx]=rgb.r; img.data[idx+1]=rgb.g; img.data[idx+2]=rgb.b; img.data[idx+3]=255;
+        }
+      }
+    }
+    ctx.putImageData(img,0,0);
+  }
+
+  function ensureMarkerCanvasSize(){
+    const rect = mapWrap.getBoundingClientRect();
+    const size = Math.max(150, Math.round(rect.width));
+    if(markerCanvas.width !== size){
+      markerCanvas.width = size; markerCanvas.height = size;
+    }
+  }
+
+  function drawMarker(theta, A, result){
+    ensureMarkerCanvasSize();
+    const ctx = markerCanvas.getContext('2d');
+    const W = markerCanvas.width, H = markerCanvas.height;
+    ctx.clearRect(0,0,W,H);
+    const c = state.consts;
+
+    let tx=null, ty=null;
+    if(theta!==null && A!==null){
+      tx = theta*W; ty = H*(1 - A/c.Amax);
+      ctx.strokeStyle = '#26211A';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(tx,ty,7,0,Math.PI*2);
+      ctx.stroke();
+    }
+
+    if(result && result.recommended){
+      const rTheta = result.recommended.theta, rA = result.recommended.A;
+      const rx = rTheta*W, ry = H*(1-rA/c.Amax);
+      if(tx!==null && Math.hypot(rx-tx, ry-ty) > 3){
+        ctx.setLineDash([3,3]);
+        ctx.strokeStyle = '#A6461F';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(tx,ty); ctx.lineTo(rx,ry); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      ctx.fillStyle = '#A6461F';
+      ctx.beginPath();
+      ctx.arc(rx,ry,5,0,Math.PI*2);
+      ctx.fill();
+    }
+  }
+
+  // ---------- Ergebnis-Anzeige ----------
+  const placeholderMsg = document.getElementById('placeholderMsg');
+  const resultBody = document.getElementById('resultBody');
+  const warningArea = document.getElementById('warningArea');
+  const targetSwatch = document.getElementById('targetSwatch');
+  const achievedSwatch = document.getElementById('achievedSwatch');
+  const targetReadout = document.getElementById('targetReadout');
+  const achievedReadout = document.getElementById('achievedReadout');
+  const dEReadout = document.getElementById('dEReadout');
+  const robustReadout = document.getElementById('robustReadout');
+  const effortReadout = document.getElementById('effortReadout');
+  const timeReadout = document.getElementById('timeReadout');
+  const recommendedBlock = document.getElementById('recommendedBlock');
+  const altList = document.getElementById('altList');
+  const detailsTable = document.getElementById('detailsTable');
+
+  function practicalityNote(r){
+    const t = I18N[state.lang];
+    if(r.Tklaer===null) return t.noteNoClear;
+    if(r.Tklaer===r.Tdye) return t.noteSameT;
+    return null;
+  }
+
+  function describeRecipe(r){
+    const t = I18N[state.lang];
+    let lines = t.dyeingLine(fmt(r.Tdye,0), fmtTime(r.tdye));
+    if(r.Tklaer!==null){
+      lines += '<br>'+t.clearingLine(fmt(r.Tklaer,0), fmtTime(r.tklaer), t.mediumNames[r.medium]);
+    } else {
+      lines += '<br>'+t.clearingNone;
+    }
+    const note = practicalityNote(r);
+    if(note) lines += '<br><span style="color:var(--good);font-style:italic;">'+note+'</span>';
+    return lines;
+  }
+
+  function renderResult(targetLab, result){
+    placeholderMsg.style.display='none';
+    resultBody.style.display='block';
+    const t = I18N[state.lang];
+
+    const c = state.consts;
+    const rgbT = labToRgb(targetLab.L, targetLab.a, targetLab.b);
+    const hexT = '#'+toHex(rgbT.r)+toHex(rgbT.g)+toHex(rgbT.b);
+    targetSwatch.style.backgroundColor = hexT;
+    targetReadout.textContent = 'L*'+fmt(targetLab.L,1)+' a*'+fmt(targetLab.a,1)+' b*'+fmt(targetLab.b,1);
+
+    const rec = result.recommended;
+    const rgbA = labToRgb(rec.lab.L, rec.lab.a, rec.lab.b);
+    const hexA = '#'+toHex(rgbA.r)+toHex(rgbA.g)+toHex(rgbA.b);
+    achievedSwatch.style.backgroundColor = hexA;
+    achievedReadout.textContent = 'L*'+fmt(rec.lab.L,1)+' a*'+fmt(rec.lab.a,1)+' b*'+fmt(rec.lab.b,1);
+
+    dEReadout.textContent = fmt(rec.dE,2);
+    robustReadout.textContent = fmt(rec.robust,2);
+    effortReadout.textContent = fmt(rec.simplicity,2);
+    timeReadout.textContent = fmtTime(rec.totalTime/60);
+
+    let warnings = '';
+    if(!result.reachable){
+      warnings += '<div class="warning-banner">'+t.warnUnreachable(fmt(rec.dE,2))+'</div>';
+    } else if(result.usedFallback){
+      warnings += '<div class="warning-banner">'+t.warnFallback(fmt(c.robustThreshold,2), fmt(c.sigma_T,1), fmt(c.sigma_t,0))+'</div>';
+    }
+    warningArea.innerHTML = warnings;
+
+    recommendedBlock.innerHTML = '<div class="rb-title">'+t.recommendedTag+'</div><div class="rb-line">'+describeRecipe(rec)+'</div>';
+
+    // Alternativen, dedupliziert
+    const seen = new Set([recipeSignature(rec)]);
+    let altHtml = '';
+    const candidates = [
+      {tag:t.tagFasterAlt, r: result.fasterAlt},
+      {tag:t.tagFastest, r: result.fastest},
+      {tag:t.tagSimplest, r: result.simplest},
+      {tag:t.tagClosest, r: result.closest},
+    ];
+    for(const cand of candidates){
+      if(!cand.r) continue;
+      const sig = recipeSignature(cand.r);
+      if(seen.has(sig)) continue;
+      seen.add(sig);
+      altHtml += '<div class="alt-card"><span class="alt-tag">'+cand.tag+'</span><div class="alt-line">'+describeRecipe(cand.r)+
+        '<br>'+t.altLine(fmt(cand.r.dE,2), fmt(cand.r.robust,2), fmt(cand.r.simplicity,2), fmtTime(cand.r.totalTime/60))+'</div></div>';
+    }
+    altList.innerHTML = altHtml;
+
+    // Zwischenwerte
+    const rows = [
+      [t.rowTheta, fmt(rec.theta*100,1)+' %'],
+      [t.rowA, fmt(rec.A,2)],
+      [t.rowDE, fmt(rec.dE,2)],
+      [t.rowSens, fmt(rec.robust,2)],
+      [t.rowEffort, fmt(rec.simplicity,2)+t.rowEffortSuffix],
+      [t.rowTime, fmtTime(rec.totalTime/60)],
+      [t.rowCandidates, String(result.pool.length)],
+    ];
+    detailsTable.innerHTML = rows.map(r=>'<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>').join('');
+  }
+
+  // ---------- Interaktion ----------
+  function canvasPosToTarget(clientX, clientY){
+    const rect = mapWrap.getBoundingClientRect();
+    let x = (clientX-rect.left)/rect.width;
+    let y = (clientY-rect.top)/rect.height;
+    x = Math.max(0,Math.min(1,x));
+    y = Math.max(0,Math.min(1,y));
+    return { theta: x, A: state.consts.Amax*(1-y) };
+  }
+
+  let pendingEvent=null, rafScheduled=false;
+  function schedulePointerUpdate(clientX, clientY){
+    pendingEvent = {clientX, clientY};
+    if(!rafScheduled){
+      rafScheduled = true;
+      requestAnimationFrame(()=>{
+        rafScheduled=false;
+        if(pendingEvent){ handlePointer(pendingEvent.clientX, pendingEvent.clientY); pendingEvent=null; }
+      });
+    }
+  }
+
+  function handlePointer(clientX, clientY){
+    const {theta,A} = canvasPosToTarget(clientX, clientY);
+    const targetLab = labFrom(A, theta, state.consts);
+    updateTargetInputs(targetLab);
+    const result = selectBest(targetLab, state.activeRecipes, state.consts);
+    state.lastTarget = targetLab; state.lastResult = result;
+    state.lastTheta = theta; state.lastA = A;
+    renderResult(targetLab, result);
+    drawMarker(theta, A, result);
+  }
+
+  const inputL = document.getElementById('inputL');
+  const inputA = document.getElementById('inputA');
+  const inputB = document.getElementById('inputB');
+  const applyTargetBtn = document.getElementById('applyTargetBtn');
+
+  function updateTargetInputs(lab){
+    inputL.value = lab.L.toFixed(1);
+    inputA.value = lab.a.toFixed(1);
+    inputB.value = lab.b.toFixed(1);
+  }
+
+  function applyManualTarget(){
+    const L = parseFloat(inputL.value);
+    const a = parseFloat(inputA.value);
+    const b = parseFloat(inputB.value);
+    if(!isFinite(L) || !isFinite(a) || !isFinite(b)) return;
+    const targetLab = {L,a,b};
+    const result = selectBest(targetLab, state.activeRecipes, state.consts);
+    state.lastTarget = targetLab; state.lastResult = result;
+    state.lastTheta = null; state.lastA = null;
+    renderResult(targetLab, result);
+    // Manuelles Ziel liegt i.A. nicht exakt auf der (theta,A)-Flaeche der Karte,
+    // daher wird nur der Ergebnis-Marker gezeichnet, kein Ziel-Ring.
+    drawMarker(null, null, result);
+  }
+  applyTargetBtn.addEventListener('click', applyManualTarget);
+  [inputL,inputA,inputB].forEach(el => el.addEventListener('change', applyManualTarget));
+
+  let dragging=false;
+  markerCanvas.addEventListener('pointerdown', e=>{
+    dragging=true;
+    try{ markerCanvas.setPointerCapture(e.pointerId); }catch(err){}
+    handlePointer(e.clientX, e.clientY);
+  });
+  markerCanvas.addEventListener('pointermove', e=>{
+    if(dragging) schedulePointerUpdate(e.clientX, e.clientY);
+  });
+  markerCanvas.addEventListener('pointerup', ()=>{ dragging=false; });
+  markerCanvas.addEventListener('pointercancel', ()=>{ dragging=false; });
+
+  // ---------- Konstanten-Panel ----------
+  const constGrid = document.getElementById('constGrid');
+  const constInputs = {};
+
+  function buildConstPanel(){
+    constGrid.innerHTML = '';
+    let lastGroup=null;
+    CONST_DEFS.forEach(def=>{
+      const groupName = def.group[state.lang];
+      if(groupName!==lastGroup){
+        const gt=document.createElement('div');
+        gt.className='const-group-title';
+        gt.textContent=groupName;
+        constGrid.appendChild(gt);
+        lastGroup=groupName;
+      }
+      const row=document.createElement('div');
+      row.className='const-item';
+      const label=document.createElement('label');
+      label.setAttribute('for','const-'+def.key);
+      label.innerHTML = def.label[state.lang] + (def.unit? ' <span class="unit">('+def.unit+')</span>':'');
+      const input=document.createElement('input');
+      input.type='number';
+      input.id='const-'+def.key;
+      input.step=def.step;
+      input.value=state.consts[def.key];
+      input.addEventListener('change', ()=>{
+        const v=parseFloat(input.value);
+        if(isFinite(v)) state.consts[def.key]=v;
+        rebuild();
+      });
+      constInputs[def.key]=input;
+      row.appendChild(label); row.appendChild(input);
+      constGrid.appendChild(row);
+    });
+  }
+  buildConstPanel();
+
+  document.getElementById('resetConst').addEventListener('click', ()=>{
+    state.consts = Object.assign({}, DEFAULTS);
+    CONST_DEFS.forEach(def=>{ constInputs[def.key].value = state.consts[def.key]; });
+    rebuild();
+  });
+  document.getElementById('rebuildBtn').addEventListener('click', rebuild);
+
+  const statusLine = document.getElementById('statusLine');
+
+  function refreshActiveView(){
+    state.activeRecipes = state.directOnly ? state.recipes.filter(r => r.Tklaer === null) : state.recipes;
+    state.reachMask = buildReachMask(state.activeRecipes, state.consts);
+    renderMap();
+    ensureMarkerCanvasSize();
+    const t = I18N[state.lang];
+    statusLine.textContent = t.statusLine(state.activeRecipes.length, state.lastBuildMs||0);
+    if(state.lastTarget){
+      const result = selectBest(state.lastTarget, state.activeRecipes, state.consts);
+      state.lastResult = result;
+      renderResult(state.lastTarget, result);
+      drawMarker(state.lastTheta, state.lastA, result);
+    }
+  }
+
+  function rebuild(){
+    statusLine.textContent = state.lang==='de' ? 'Berechne Rezept-Raster…' : 'Computing recipe grid…';
+    // im naechsten Frame, damit der Status-Text sichtbar wird
+    requestAnimationFrame(()=>{
+      const t0 = performance.now();
+      state.recipes = buildGrid(state.consts);
+      const t1 = performance.now();
+      state.lastBuildMs = Math.round(t1-t0);
+      refreshActiveView();
+    });
+  }
+
+  const directOnlyToggle = document.getElementById('directOnlyToggle');
+  directOnlyToggle.addEventListener('change', ()=>{
+    state.directOnly = directOnlyToggle.checked;
+    refreshActiveView();
+  });
+
+  // ---------- Sprachumschaltung ----------
+  function applyStaticI18n(){
+    const t = I18N[state.lang];
+    document.querySelectorAll('[data-i18n]').forEach(el=>{
+      const key = el.getAttribute('data-i18n');
+      if(t[key]!==undefined) el.textContent = t[key];
+    });
+    document.querySelectorAll('[data-i18n-html]').forEach(el=>{
+      const key = el.getAttribute('data-i18n-html');
+      if(t[key]!==undefined) el.innerHTML = t[key];
+    });
+  }
+
+  const btnLangDe = document.getElementById('btnLangDe');
+  const btnLangEn = document.getElementById('btnLangEn');
+  function setLang(lang){
+    state.lang = lang;
+    document.documentElement.lang = lang;
+    btnLangDe.classList.toggle('active', lang==='de');
+    btnLangEn.classList.toggle('active', lang==='en');
+    applyStaticI18n();
+    buildConstPanel();
+    if(state.lastTarget){
+      renderResult(state.lastTarget, state.lastResult);
+    }
+  }
+  btnLangDe.addEventListener('click', ()=>setLang('de'));
+  btnLangEn.addEventListener('click', ()=>setLang('en'));
+  applyStaticI18n();
+
+  window.addEventListener('resize', ()=>{ ensureMarkerCanvasSize(); });
+
+  rebuild();
+})();
+</script>
+</body>
+</html>
