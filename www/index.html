@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+<title>Krapp × tPHA – Werkzeuge</title>
+<style>
+  :root{
+    --paper:#EAE4D6;
+    --card:#F8F4E9;
+    --card-line:#D8CEB5;
+    --ink:#26211A;
+    --ink-muted:#736A57;
+    --accent:#A6461F;
+    --accent-soft:#C97A4A;
+    --font-display: ui-serif, Georgia, "Times New Roman", "Noto Serif", serif;
+    --font-mono: ui-monospace, "SF Mono", "Roboto Mono", "Cascadia Mono", Consolas, monospace;
+    --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background-color:var(--paper);
+    background-image:
+      repeating-linear-gradient(0deg, rgba(38,33,26,0.05) 0px, rgba(38,33,26,0.05) 1px, transparent 1px, transparent 28px),
+      repeating-linear-gradient(90deg, rgba(38,33,26,0.05) 0px, rgba(38,33,26,0.05) 1px, transparent 1px, transparent 28px);
+    color:var(--ink);
+    font-family:var(--font-body);
+    -webkit-text-size-adjust:100%;
+  }
+  .page{max-width:520px;margin:0 auto;padding:32px 16px 48px;}
+  header{margin-bottom:24px;}
+  h1{
+    font-family:var(--font-display);
+    font-size:1.7rem;
+    margin:0 0 6px;
+    letter-spacing:0.01em;
+  }
+  .subtitle{margin:0;color:var(--ink-muted);font-size:0.9rem;line-height:1.5;}
+
+  .tool-card{
+    display:block;
+    background:var(--card);
+    border:1px solid var(--card-line);
+    border-radius:12px;
+    padding:20px;
+    margin-bottom:16px;
+    text-decoration:none;
+    color:inherit;
+    position:relative;
+    transition:border-color .12s ease, background-color .12s ease;
+  }
+  .tool-card:hover, .tool-card:focus-visible{
+    border-color:var(--accent-soft);
+    background:#FBF8F1;
+    outline:none;
+  }
+  .tool-card .kicker{
+    font-family:var(--font-mono);
+    font-size:0.7rem;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--accent);
+    margin-bottom:6px;
+  }
+  .tool-card h2{
+    font-family:var(--font-display);
+    font-size:1.25rem;
+    margin:0 0 8px;
+  }
+  .tool-card p{
+    margin:0;
+    font-size:0.88rem;
+    color:var(--ink-muted);
+    line-height:1.5;
+  }
+  .tool-card .arrow{
+    position:absolute;
+    right:18px;
+    top:50%;
+    transform:translateY(-50%);
+    color:var(--accent-soft);
+    font-size:1.3rem;
+  }
+
+  footer{
+    margin-top:28px;
+    font-size:0.76rem;
+    color:var(--ink-muted);
+    line-height:1.6;
+  }
+  footer code{font-family:var(--font-mono);}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <h1>Krapp auf tPHA</h1>
+    <p class="subtitle">Zwei Werkzeuge rund um das Diffusions-/Chelatisierungsmodell für Krapp-Färbung auf tPHA-Bioplastik.</p>
+  </header>
+
+  <a class="tool-card" href="vorhersage.html">
+    <div class="kicker">Vorwärts</div>
+    <h2>Vorhersage-Tool</h2>
+    <p>Färbe- und Klärparameter einstellen (Temperatur, Dauer, Klärmedium) und die resultierende Farbe als Lab und RGB sehen.</p>
+    <span class="arrow">→</span>
+  </a>
+
+  <a class="tool-card" href="rezeptfinder.html">
+    <div class="kicker">Rückwärts</div>
+    <h2>Rezeptfinder</h2>
+    <p>Zielfarbe auf einer Karte wählen oder exakt eingeben — automatisch ein robustes, praktikables Rezept aus dem Modell finden.</p>
+    <span class="arrow">→</span>
+  </a>
+
+  <footer>
+    Beide Werkzeuge laufen vollständig lokal im Browser (kein Server, keine Übertragung von Daten) und funktionieren offline,
+    sobald sie einmal geladen wurden. Modellkonstanten sind in beiden Tools unter „Konstanten bearbeiten" einsehbar und
+    editierbar. Quelle des Modells: <code>Modell_tPHA.md</code>.
+  </footer>
+
+</div>
+</body>
+</html>

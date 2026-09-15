@@ -269,6 +269,23 @@
     padding:8px 10px;
     margin-bottom:8px;
     font-size:0.8rem;
+    cursor:pointer;
+    position:relative;
+    transition:background-color .1s ease, border-color .1s ease;
+  }
+  .alt-card:hover, .alt-card:focus-visible{
+    background:rgba(166,70,31,0.06);
+    border-color:var(--accent-soft);
+    outline:none;
+  }
+  .alt-card::after{
+    content:"→";
+    position:absolute;
+    right:10px;
+    top:50%;
+    transform:translateY(-50%);
+    color:var(--accent-soft);
+    font-size:0.9rem;
   }
   .alt-card .alt-tag{
     display:inline-block;
@@ -278,7 +295,7 @@
     color:var(--accent);
     margin-bottom:3px;
   }
-  .alt-card .alt-line{font-family:var(--font-mono);font-size:0.8rem;}
+  .alt-card .alt-line{font-family:var(--font-mono);font-size:0.8rem;padding-right:18px;}
 
   details{margin-bottom:16px;}
   details > summary{
@@ -417,7 +434,7 @@
           <div class="swatch-readout" id="targetReadout"></div>
         </div>
         <div class="swatch-col">
-          <div class="swatch-label" data-i18n="achievedLabel">Empfohlenes Rezept</div>
+          <div class="swatch-label" id="achievedLabel" data-i18n="achievedLabel">Empfohlenes Rezept</div>
           <div class="swatch-box" id="achievedSwatch"></div>
           <div class="swatch-readout" id="achievedReadout"></div>
         </div>
@@ -555,8 +572,9 @@
       mediumNames: {none:'kein Medium', dest:'destilliertes Wasser', tap:'Leitungswasser'},
       noteNoClear: 'kein zweites Bad nötig',
       noteSameT: 'gleiche Temperatur wie Färbung',
-      tagFastest: 'Am schnellsten', tagSimplest: 'Am einfachsten', tagClosest: 'Farblich am nächsten', tagFasterAlt: 'Deutlich schneller (größerer Abstand)',
-      altLine: (dE,sens,eff,time) => 'ΔE='+dE+' · Empfindlichkeit='+sens+' · Aufwand='+eff+' · '+time,
+      tagFastest: 'Am schnellsten', tagSimplest: 'Am einfachsten', tagClosest: 'Farblich am nächsten', tagFasterAlt: 'Deutlich schneller (größerer Abstand)', tagHueMatch: 'Gleicher Farbton (andere Sättigung)',
+      altLine: (dE,sens,eff,time,extra) => 'ΔE='+dE+' · Empfindlichkeit='+sens+' · Aufwand='+eff+' · '+time+(extra?' · '+extra:''),
+      hueDevLabel: dHue => 'Hue-Abweichung '+dHue+'°',
       warnUnreachable: dE => 'Zielfarbe liegt außerhalb des mit diesem Modell erreichbaren Bereichs. Nächstliegende Option gezeigt (ΔE='+dE+').',
       warnFallback: (thr,sT,st) => 'Kein Rezept in Farbnähe erfüllt das Empfindlichkeits-Budget (ΔE≤'+thr+' bei ±'+sT+'°C/±'+st+'s). Unempfindlichste verfügbare Option gezeigt.',
       rowTheta: 'θ (Ergebnis)', rowA: 'A (Ergebnis)', rowDE: 'ΔE zum Ziel',
@@ -602,8 +620,9 @@
       mediumNames: {none:'no medium', dest:'distilled water', tap:'tap water'},
       noteNoClear: 'no second bath needed',
       noteSameT: 'same temperature as dyeing',
-      tagFastest: 'Fastest', tagSimplest: 'Least effort', tagClosest: 'Closest color match', tagFasterAlt: 'Notably faster (larger gap)',
-      altLine: (dE,sens,eff,time) => 'ΔE='+dE+' · Sensitivity='+sens+' · Effort='+eff+' · '+time,
+      tagFastest: 'Fastest', tagSimplest: 'Least effort', tagClosest: 'Closest color match', tagFasterAlt: 'Notably faster (larger gap)', tagHueMatch: 'Same hue (different saturation)',
+      altLine: (dE,sens,eff,time,extra) => 'ΔE='+dE+' · Sensitivity='+sens+' · Effort='+eff+' · '+time+(extra?' · '+extra:''),
+      hueDevLabel: dHue => 'hue deviation '+dHue+'°',
       warnUnreachable: dE => 'Target color lies outside the range achievable with this model. Closest option shown (ΔE='+dE+').',
       warnFallback: (thr,sT,st) => 'No recipe near this color meets the sensitivity budget (ΔE≤'+thr+' at ±'+sT+'°C/±'+st+'s). Least sensitive available option shown.',
       rowTheta: 'θ (result)', rowA: 'A (result)', rowDE: 'ΔE to target',
@@ -686,6 +705,11 @@
 
   function deltaE(l1,l2){
     return Math.sqrt((l1.L-l2.L)**2 + (l1.a-l2.a)**2 + (l1.b-l2.b)**2);
+  }
+  function hueOf(lab){
+    let h = Math.atan2(lab.b, lab.a) * 180/Math.PI;
+    if(h<0) h += 360;
+    return h;
   }
 
   function labToRgb(L, a, b){
@@ -886,7 +910,24 @@
       fasterAlt.simplicity = simplicityOf(fasterAlt,c);
     }
 
-    return {recommended, fastest, simplest, closest, fasterAlt, reachable, usedFallback, pool};
+    // Hue-treue Alternative: bei nicht erreichbaren Zielen kann reine dE-Minimierung den Farbton
+    // verschieben (z.B. bei Zielen mit unmöglicher L*/a*-Kombination). Diese Alternative haelt den
+    // Farbton so nah wie moeglich am Ziel und akzeptiert dafuer eine groessere Chroma-/Helligkeitsabweichung.
+    const targetHue = hueOf(targetLab);
+    let hueMatch = null;
+    for(const r of recipes){
+      const rHue = hueOf(r.lab);
+      const dHue = Math.abs(rHue-targetHue);
+      if(hueMatch===null || dHue<hueMatch.dHue || (dHue===hueMatch.dHue && r.dE<hueMatch.dE)){
+        hueMatch = r; hueMatch.dHue = dHue;
+      }
+    }
+    if(hueMatch){
+      hueMatch.robust = robustnessOf(hueMatch,c);
+      hueMatch.simplicity = simplicityOf(hueMatch,c);
+    }
+
+    return {recommended, fastest, simplest, closest, fasterAlt, hueMatch, reachable, usedFallback, pool};
   }
 
   // ---------- Rendering ----------
@@ -964,6 +1005,7 @@
   const warningArea = document.getElementById('warningArea');
   const targetSwatch = document.getElementById('targetSwatch');
   const achievedSwatch = document.getElementById('achievedSwatch');
+  const achievedLabel = document.getElementById('achievedLabel');
   const targetReadout = document.getElementById('targetReadout');
   const achievedReadout = document.getElementById('achievedReadout');
   const dEReadout = document.getElementById('dEReadout');
@@ -994,69 +1036,130 @@
     return lines;
   }
 
+  function tagLabelFor(key, t){
+    switch(key){
+      case 'recommended': return t.recommendedTag;
+      case 'fasterAlt': return t.tagFasterAlt;
+      case 'fastest': return t.tagFastest;
+      case 'simplest': return t.tagSimplest;
+      case 'closest': return t.tagClosest;
+      case 'hueMatch': return t.tagHueMatch;
+    }
+    return '';
+  }
+
+  function allCandidates(result, t){
+    return [
+      {key:'recommended', tag:t.recommendedTag, r: result.recommended},
+      {key:'fasterAlt', tag:t.tagFasterAlt, r: result.fasterAlt},
+      {key:'fastest', tag:t.tagFastest, r: result.fastest},
+      {key:'simplest', tag:t.tagSimplest, r: result.simplest},
+      {key:'closest', tag:t.tagClosest, r: result.closest},
+      {key:'hueMatch', tag:t.tagHueMatch, r: result.hueMatch},
+    ].filter(c=>c.r);
+  }
+
+  function recipeForKey(result, key){
+    switch(key){
+      case 'recommended': return result.recommended;
+      case 'fasterAlt': return result.fasterAlt;
+      case 'fastest': return result.fastest;
+      case 'simplest': return result.simplest;
+      case 'closest': return result.closest;
+      case 'hueMatch': return result.hueMatch;
+    }
+    return null;
+  }
+
   function renderResult(targetLab, result){
+    const preferredKey = state.selectedTagKey || 'recommended';
+    const recipe = recipeForKey(result, preferredKey);
+    if(recipe){ showSelection(preferredKey, recipe); }
+    else { showSelection('recommended', result.recommended); }
+  }
+
+  function showSelection(tagKey, recipe){
     placeholderMsg.style.display='none';
     resultBody.style.display='block';
     const t = I18N[state.lang];
-
     const c = state.consts;
+    const targetLab = state.lastTarget;
+    const result = state.lastResult;
+    state.selectedTagKey = tagKey;
+
     const rgbT = labToRgb(targetLab.L, targetLab.a, targetLab.b);
     const hexT = '#'+toHex(rgbT.r)+toHex(rgbT.g)+toHex(rgbT.b);
     targetSwatch.style.backgroundColor = hexT;
     targetReadout.textContent = 'L*'+fmt(targetLab.L,1)+' a*'+fmt(targetLab.a,1)+' b*'+fmt(targetLab.b,1);
 
-    const rec = result.recommended;
-    const rgbA = labToRgb(rec.lab.L, rec.lab.a, rec.lab.b);
+    const rgbA = labToRgb(recipe.lab.L, recipe.lab.a, recipe.lab.b);
     const hexA = '#'+toHex(rgbA.r)+toHex(rgbA.g)+toHex(rgbA.b);
     achievedSwatch.style.backgroundColor = hexA;
-    achievedReadout.textContent = 'L*'+fmt(rec.lab.L,1)+' a*'+fmt(rec.lab.a,1)+' b*'+fmt(rec.lab.b,1);
+    achievedReadout.textContent = 'L*'+fmt(recipe.lab.L,1)+' a*'+fmt(recipe.lab.a,1)+' b*'+fmt(recipe.lab.b,1);
+    achievedLabel.textContent = tagLabelFor(tagKey, t);
 
-    dEReadout.textContent = fmt(rec.dE,2);
-    robustReadout.textContent = fmt(rec.robust,2);
-    effortReadout.textContent = fmt(rec.simplicity,2);
-    timeReadout.textContent = fmtTime(rec.totalTime/60);
+    dEReadout.textContent = fmt(recipe.dE,2);
+    robustReadout.textContent = fmt(recipe.robust,2);
+    effortReadout.textContent = fmt(recipe.simplicity,2);
+    timeReadout.textContent = fmtTime(recipe.totalTime/60);
 
     let warnings = '';
     if(!result.reachable){
-      warnings += '<div class="warning-banner">'+t.warnUnreachable(fmt(rec.dE,2))+'</div>';
+      warnings += '<div class="warning-banner">'+t.warnUnreachable(fmt(result.recommended.dE,2))+'</div>';
     } else if(result.usedFallback){
       warnings += '<div class="warning-banner">'+t.warnFallback(fmt(c.robustThreshold,2), fmt(c.sigma_T,1), fmt(c.sigma_t,0))+'</div>';
     }
     warningArea.innerHTML = warnings;
 
-    recommendedBlock.innerHTML = '<div class="rb-title">'+t.recommendedTag+'</div><div class="rb-line">'+describeRecipe(rec)+'</div>';
+    let recLines = describeRecipe(recipe);
+    if(recipe.dHue!==undefined){
+      recLines += '<br><span style="color:var(--ink-muted);font-style:italic;">'+t.hueDevLabel(fmt(recipe.dHue,1))+'</span>';
+    }
+    recommendedBlock.innerHTML = '<div class="rb-title">'+tagLabelFor(tagKey,t)+'</div><div class="rb-line">'+recLines+'</div>';
 
-    // Alternativen, dedupliziert
-    const seen = new Set([recipeSignature(rec)]);
+    // Alternativen: alle Kandidaten ausser dem gerade oben angezeigten, dedupliziert,
+    // klickbar (nur Faerbung/Klaerung - Details erscheinen beim Anklicken oben)
+    const seen = new Set([recipeSignature(recipe)]);
     let altHtml = '';
-    const candidates = [
-      {tag:t.tagFasterAlt, r: result.fasterAlt},
-      {tag:t.tagFastest, r: result.fastest},
-      {tag:t.tagSimplest, r: result.simplest},
-      {tag:t.tagClosest, r: result.closest},
-    ];
-    for(const cand of candidates){
-      if(!cand.r) continue;
+    state.candidateLookup = {};
+    let idx = 0;
+    for(const cand of allCandidates(result, t)){
       const sig = recipeSignature(cand.r);
       if(seen.has(sig)) continue;
       seen.add(sig);
-      altHtml += '<div class="alt-card"><span class="alt-tag">'+cand.tag+'</span><div class="alt-line">'+describeRecipe(cand.r)+
-        '<br>'+t.altLine(fmt(cand.r.dE,2), fmt(cand.r.robust,2), fmt(cand.r.simplicity,2), fmtTime(cand.r.totalTime/60))+'</div></div>';
+      state.candidateLookup[idx] = {key:cand.key, r:cand.r};
+      altHtml += '<div class="alt-card" data-idx="'+idx+'" tabindex="0" role="button"><span class="alt-tag">'+cand.tag+'</span><div class="alt-line">'+describeRecipe(cand.r)+'</div></div>';
+      idx++;
     }
     altList.innerHTML = altHtml;
 
     // Zwischenwerte
     const rows = [
-      [t.rowTheta, fmt(rec.theta*100,1)+' %'],
-      [t.rowA, fmt(rec.A,2)],
-      [t.rowDE, fmt(rec.dE,2)],
-      [t.rowSens, fmt(rec.robust,2)],
-      [t.rowEffort, fmt(rec.simplicity,2)+t.rowEffortSuffix],
-      [t.rowTime, fmtTime(rec.totalTime/60)],
+      [t.rowTheta, fmt(recipe.theta*100,1)+' %'],
+      [t.rowA, fmt(recipe.A,2)],
+      [t.rowDE, fmt(recipe.dE,2)],
+      [t.rowSens, fmt(recipe.robust,2)],
+      [t.rowEffort, fmt(recipe.simplicity,2)+t.rowEffortSuffix],
+      [t.rowTime, fmtTime(recipe.totalTime/60)],
       [t.rowCandidates, String(result.pool.length)],
     ];
     detailsTable.innerHTML = rows.map(r=>'<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>').join('');
   }
+
+  altList.addEventListener('click', (e)=>{
+    const card = e.target.closest('.alt-card');
+    if(!card) return;
+    const entry = state.candidateLookup[card.dataset.idx];
+    if(entry) showSelection(entry.key, entry.r);
+  });
+  altList.addEventListener('keydown', (e)=>{
+    if(e.key!=='Enter' && e.key!==' ') return;
+    const card = e.target.closest('.alt-card');
+    if(!card) return;
+    e.preventDefault();
+    const entry = state.candidateLookup[card.dataset.idx];
+    if(entry) showSelection(entry.key, entry.r);
+  });
 
   // ---------- Interaktion ----------
   function canvasPosToTarget(clientX, clientY){
@@ -1087,6 +1190,7 @@
     const result = selectBest(targetLab, state.activeRecipes, state.consts);
     state.lastTarget = targetLab; state.lastResult = result;
     state.lastTheta = theta; state.lastA = A;
+    state.selectedTagKey = 'recommended'; // neues Ziel -> Auswahl zuruecksetzen
     renderResult(targetLab, result);
     drawMarker(theta, A, result);
   }
@@ -1111,6 +1215,7 @@
     const result = selectBest(targetLab, state.activeRecipes, state.consts);
     state.lastTarget = targetLab; state.lastResult = result;
     state.lastTheta = null; state.lastA = null;
+    state.selectedTagKey = 'recommended'; // neues Ziel -> Auswahl zuruecksetzen
     renderResult(targetLab, result);
     // Manuelles Ziel liegt i.A. nicht exakt auf der (theta,A)-Flaeche der Karte,
     // daher wird nur der Ergebnis-Marker gezeichnet, kein Ziel-Ring.
